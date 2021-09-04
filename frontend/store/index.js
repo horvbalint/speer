@@ -26,10 +26,10 @@ export const state = () => ({
   popUpDrag: null, // Drag instance (plugins/drag.js)
   screenWidth: 1000, // width of the screen
   pageVisible: true, // is the page visible
-  // backendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001',
-  // frontendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun',
-  backendURL: 'http://localhost:9001',
-  frontendURL: 'http://localhost:9000',
+  backendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001',
+  frontendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun',
+  // backendURL: 'http://localhost:9001',
+  // frontendURL: 'http://localhost:9000',
   messageSound: null, // sound to play when a message is received
   callSound: null, // sound to play when a call is received
 })
@@ -168,10 +168,10 @@ export const mutations = {
     state.screenWidth = 1000
     state.pageVisible = true
     state.filesFromShare = []
-    // state.backendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001'
-    // state.frontendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun'
-    state.backendURL = 'http://localhost:9001'
-    state.frontendURL = 'http://localhost:9000'
+    state.backendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001'
+    state.frontendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun'
+    // state.backendURL = 'http://localhost:9001'
+    // state.frontendURL = 'http://localhost:9000'
     state.messageSound = null
     state.callSound = null
   },

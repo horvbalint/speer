@@ -1,7 +1,6 @@
 {
   "name": "speer",
-  "version": "1.3.6",
-  "private": true,
+  "version": "1.3.7",
   "license": "GPL-3.0-or-later",
   "author": "horvbalint",
   "scripts": {

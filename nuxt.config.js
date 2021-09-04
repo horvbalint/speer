@@ -101,8 +101,8 @@ export default {
   ** See https://axios.nuxtjs.org/options
   */
   axios: {
-    // baseURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001',
-    baseURL: 'http://localhost:9001',
+    baseURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001',
+    // baseURL: 'http://localhost:9001',
   },
   /*
   ** Build configuration
