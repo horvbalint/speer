@@ -1,0 +1,314 @@
+<template>
+  <div class="container">
+    <div class="page" :class="{inCall: $store.getters.call.isInCall}">
+      <transition name="scale" mode="out-in">
+        <Call class="call-section" v-if="$store.getters.call.isInCall"/>
+      </transition>
+      <Nuxt class="nuxt"/>
+    </div>
+
+    <SideBar class="sidebar" ref="sideBar" @close="closeSideBar()"/>
+
+    <transition name="notifade">
+      <div class="version-noti" v-if="showVersionNotification" @click="refreshToUpdate()">
+        <p>There is a new version available, click here to update!</p>
+        <i class="fas fa-chevron-circle-up"/>
+      </div>
+    </transition>
+
+    <transition name="pop">
+      <CallPopUp v-if="$store.state.popUp.call"></CallPopUp>
+      <FilePopUp v-if="$store.state.popUp.file"></FilePopUp>
+      <PingPopUp v-if="$store.state.popUp.ping"></PingPopUp>
+      <RequestPopUp v-if="$store.state.requests.length"/>
+      <AddFriendsPopUp v-if="$store.state.popUp.addFriends"/>
+      <NotificationPopUp v-if="$store.state.popUp.notification"/>
+      <FilesFromSharePopUp v-if="$store.state.popUp.filesFromShare"/>
+      <ChangelogPopUp v-if="$store.state.popUp.changelog"/>
+      <BreakingChangePopUp v-if="showBreakingPopUp"/>
+      <ImageViewer v-if="$store.state.popUp.image"/>
+    </transition>
+
+    <Alert/>
+  </div>
+</template>
+
+<script>
+import SideBar from '~/components/sideBar'
+import Alert from '~/components/popUp/alert'
+import AddFriendsPopUp from '~/components/popUp/addFriends'
+import RequestPopUp from '~/components/popUp/requests'
+import PingPopUp from '~/components/popUp/ping'
+import CallPopUp from '~/components/popUp/call'
+import FilePopUp from '~/components/popUp/file'
+import NotificationPopUp from '~/components/popUp/notification'
+import ImageViewer from '~/components/popUp/imageViewer'
+import FilesFromSharePopUp from '~/components/popUp/filesFromShare'
+import ChangelogPopUp from '~/components/popUp/changelog'
+import BreakingChangePopUp from '~/components/popUp/breakingChange'
+import PackageJSON from '~/../package.json'
+
+export default {
+  data() {
+    return {
+      showVersionNotification: false,
+      showBreakingPopUp: false,
+      swRegistration: null,
+      version: PackageJSON.version
+    }
+  },
+  async created() {
+    const workbox = await window.$workbox
+    if(!workbox) return
+
+    workbox.addEventListener('installed', event => {
+      if(this.showBreakingPopUp || !event.isUpdate) return
+
+      this.showVersionNotification = true
+    })
+
+  },
+  mounted() {
+    this.$store.dispatch('setScreenWidth', window.innerWidth)
+
+    window.addEventListener('resize', () => {
+      if(this.$store.state.screenWidth <= 800) {
+        if(window.innerWidth > 800) {
+          this.$store.state.sideBarDrag.stop()
+          this.$refs.sideBar.$el.style.transform = 'translateX(0)'
+        }
+      }
+      else {
+        if(window.innerWidth <= 800) {
+          this.$refs.sideBar.$el.style.transform = `translateX(${this.$store.state.sideBarDrag.state}%)`
+          this.$store.state.sideBarDrag.start()
+        }
+      }
+
+      this.$store.dispatch('setScreenWidth', window.innerWidth)
+    })
+
+    let boundary = -85
+    this.$store.dispatch('setSideBarDrag', new Drag({
+      range: {from: -100, to: 0},
+      multiplier: 1/(this.$store.state.screenWidth/100),
+      startOnCreated: this.$store.state.screenWidth <= 800,
+      onStart: () => this.$refs.sideBar.$el.style.willChange = 'transform',
+      setter: percent => this.$refs.sideBar.$el.style.transform = `translateX(${percent}%)`,
+      onEnd: percent => {
+        if(percent < boundary) {
+          boundary = -85
+          return -100
+        }
+        else {
+          boundary = -15
+          return 0
+        }
+      },
+      onDone: () => this.$refs.sideBar.$el.style.willChange = 'auto',
+    }))
+
+    navigator.serviceWorker.addEventListener('message', event => {
+      if(event.data.action !== 'send-files') return
+
+      this.$store.dispatch('setFilesFromShare', event.data.files)
+
+      if(this.$store.getters.partner)
+        this.$store.dispatch('popUp/open', 'filesFromShare')
+    })
+
+    navigator.serviceWorker.getRegistration()
+      .then( registration => {
+        if(registration) {
+          this.swRegistration = registration
+          this.swRegistration.active.postMessage({action: 'ready-to-receive'})
+
+          window.addEventListener('beforeunload', this.disconnectFromSw)
+        }
+      })
+      .catch(err => console.error('COULD NOT GET REGISTRATION', err) )
+
+    this.$axios.$get(`/breaking/${this.version}`)
+      .then( wasBreaking => {
+        if(wasBreaking) this.showBreakingPopUp = true
+      })
+      .catch( err => console.error(err) )
+  },
+  methods: {
+    refreshToUpdate() {
+      this.showVersionNotification = false
+      localStorage['showChangelog'] = this.version
+      location.reload()
+    },
+    closeSideBar() {
+      if(this.$store.state.screenWidth > 800) return
+
+      this.$refs.sideBar.$el.style.willChange = 'transform'
+      this.$refs.sideBar.$el.style.transition = 'transform .2s ease-out'
+
+      this.$store.state.sideBarDrag.state = -100
+      this.$refs.sideBar.$el.style.transform = `translateX(${this.$store.state.sideBarDrag.state}%)`
+
+      this.$refs.sideBar.$el.addEventListener('transitionend', () => {  
+        this.$refs.sideBar.$el.style.willChange = 'auto'
+        this.$refs.sideBar.$el.style.transition = 'none'
+      }, false)
+    },
+    disconnectFromSw() {
+      if(!this.swRegistration) return
+
+      this.swRegistration.active.postMessage({action: 'disconnect'})
+    }
+  },
+  beforeDestroy() {
+    this.disconnectFromSw()
+    window.removeEventListener('beforeunload', this.disconnectFromSw)
+
+    if(this.$store.state.sideBarDrag)
+      this.$store.state.sideBarDrag.stop()
+  },
+  components: {
+    SideBar,
+    Alert,
+    AddFriendsPopUp,
+    RequestPopUp,
+    PingPopUp,
+    CallPopUp,
+    FilePopUp,
+    ImageViewer,
+    NotificationPopUp,
+    FilesFromSharePopUp,
+    ChangelogPopUp,
+    BreakingChangePopUp
+  }
+}
+</script>
+
+<style scoped>
+.container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+
+  display: grid;
+  grid-template-columns: 300px auto;
+  grid-template-rows: auto;
+  grid-template-areas:
+    "sidebar main"
+}
+
+.scale-enter-active, .scale-leave-active {
+  transition: all .5s  ease-out;
+}
+.scale-enter, .scale-leave-to {
+  opacity: 0;
+  height: 0 !important;
+}
+.call {
+  height: 65%;
+}
+.nuxt {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: height .5s ease-out;
+}
+.inCall .nuxt {
+  height: 35%;
+}
+
+.sidebar {
+  grid-area: sidebar;
+  transform: translateX(0);
+}
+.page {
+  grid-area: main;
+  position: relative;
+}
+
+.pop-enter-active, .pop-leave-active {
+  transition: var(--speed-normal);
+}
+
+.version-noti {
+  position: fixed;
+  bottom: 10px;
+  left: 50%;
+  transform: translate(-50%, 0);
+  border-radius: 10px;
+  background: var(--accent-color);
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 0 15px var(--shadow-color);
+  max-width: 95%;
+  cursor: pointer;
+}
+.version-noti p {
+  font-size: 20px;
+  white-space: nowrap;
+}
+.version-noti i {
+  font-size: 20px;
+  margin-left: 10px;
+}
+.refresh-btn {
+  padding: 0 !important;
+  margin-left: 10px;
+}
+
+.notifade-enter-active,
+.notifade-leave-active {
+  transition: transform var(--speed-normal), opacity var(--speed-normal);
+  transform: translate(-50%, 0);
+}
+.notifade-enter,
+.notifade-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 15px);
+}
+
+@media screen and (max-width: 800px) {
+  .container {
+    display: block;
+  }
+  .sidebar {
+    width: 300px;
+    max-width: 60%;
+
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+
+    transform: translateX(-100%);
+  }
+  .page {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .version-noti {
+    padding: 10px;
+  }
+  .version-noti p {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .version-noti i {
+    display: none;
+  }
+  .sidebar {
+    width: 100%;
+    max-width: none;
+  }
+}
+</style>

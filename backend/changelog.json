@@ -1,0 +1,87 @@
+{
+  "1.3.6": {
+    "title": "Polishes and updates",
+    "changes": [
+      "Native browser dialogs were replaced or removed",
+      "App description is updated",
+      "The folder structure of the project was restructured and is ready to be opensourced"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
+  "1.3.5": {
+    "title": "Confirmation email",
+    "changes": [
+      "After registrating you also have to confirm your email address, by clicking a link in an email sent to your address",
+      "Secret informations (passwords, tokens) are now moved to a config file, making it possible to opensource the project",
+      "Visual and UX fixes"
+    ],
+    "notes": [],
+    "type": "feature"
+  },
+  "1.2.5": {
+    "title": "Polishes and updates",
+    "changes": [
+      "There is a new pop-up forcing an update when there was a breaking change since the last use",
+      "In-call settings now work as expected again",
+      "Updated the descriptions at some places"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
+  "1.2.4": {
+    "title": "Behind the scenes",
+    "changes": [
+      "Correct handling of the partner disconnecting during communication",
+      "Code cleanup"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
+  "1.2.3": {
+    "title": "Multiple call connections",
+    "changes": [
+      "Call connections now do not overwrite eachother"
+    ],
+    "notes": [
+      "This means that if the signal server goes down, you can still call all your friends who you talked with before in the session"
+    ],
+    "type": "fix"
+  },
+  "1.2.2": {
+    "title": "No more surprises",
+    "changes": [
+      "You are no longer logged out, when connection with the signal server is lost",
+      "You can continue to use connections that were already established"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
+  "1.2.1": {
+    "title": "Visual update",
+    "changes": [
+      "The built-in alert modals were replaced with nicer looking and non-blocking custom modals"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
+  "1.2.0": {
+    "title": "See what changed",
+    "changes": [
+      "After upgrading to a new version you will be greeted with the important changes"
+    ],
+    "notes": [],
+    "type": "feature"
+  },
+  "1.1.0": {
+    "title": "File sharing made easy",
+    "changes": [
+      "Added initial support for the 'Web Share Target API'"
+    ],
+    "notes": [
+      "This functionality is currently only available on Android and ChromeOS, when installed as a PWA",
+      "You might need to reinstall Speer, if you already have it installed"
+    ],
+    "type": "feature"
+  }
+}

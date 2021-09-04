@@ -1,0 +1,426 @@
+<template>
+  <div class="blank-index"  v-if="!$store.getters.partner">
+    <div
+    v-if="$store.state.user"
+    class="profile"
+    @click="$store.dispatch('popUp/open', 'settings')"
+    >
+      <span>{{$store.state.user.username}}</span>
+      <div class="avatar" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.user.avatar}')`}"/>
+    </div>
+
+    <div class="content">
+      <img src="/svg/chat.svg" alt="">
+      
+      <template v-if="!$route.query['share-target']">
+        <p class="desktop">Choose someone from the sidebar to start chatting</p>
+        <p class="mobile">Swipe from the left to see your friends</p>
+      </template>
+      <p v-else class="file-from-share">Choose a friend who you want to share the files with</p>
+    </div>
+
+    <p class="version" @click="showChangeLog()">version {{version}}</p>
+
+    <transition name="pop">
+      <Settings v-if="$store.state.popUp.settings"/>
+    </transition>
+  </div>
+  
+  <div v-else class="index">
+    <div class="header">
+      <i class="fas fa-arrow-left" @click="$store.dispatch('closeParnter')"/>
+      <h2>{{ $store.getters.partnerFriend.username }}</h2>
+      <div v-if="!$store.getters.call.isInCall">
+        <i
+          class="fas fa-phone"
+          :class="{unavailable: !isCallAvailable}"
+          @click="$store.dispatch('call/call', {})"
+        ></i>
+        <i
+          class="fas fa-video"
+          :class="{unavailable: !isCallAvailable}"
+          @click="$store.dispatch('call/call', {video: true})"
+        ></i>
+      </div>
+    </div>
+
+    <div class="messages" @dragover="handleDragOver($event)" @drop="hanldeDrop($event)" @dragleave="handleDragLeave($event)">
+      <div v-if="fileDragOver" class="drag-topper">
+        <p>Drop files here to send them!</p>
+      </div>
+
+      <div
+        v-for="(message, index) in $store.getters.partner.text.messages"
+        :key="`m-${index}`"
+        class="message"
+        :class="{'own': message.sender == $store.state.user._id, 'file': message.file}"
+        :style="{'background-image': `linear-gradient(to right, var(--green) ${message.percent}%, var(--accent-color) ${message.percent}%)`}"
+        :title="formatTimeStamp(message.timeStamp)"
+      >
+        <p>
+          {{message.message}}
+          <i v-if="message.call" class="fas fa-phone"/>
+          <i v-else-if="message.file" class="fas fa-file"/>
+        </p>
+      </div>
+    </div>
+
+    <div class="bottom">
+      <input type="text" v-model="message" @keyup.enter="send()" placeholder="Type here..." autocomplete="off">
+      <input type="file" multiple hidden ref="file" @change="sendFiles()">
+      
+      <div class="icons">
+        <i class="fas fa-file-medical" :class="{unavailable: !isFileAvailable}" @click="openFilePicker()"></i>
+        <i class="fas fa-paper-plane" @click="send()"></i>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+import Call from '~/components/call'
+import Settings from '~/components/popUp/settings'
+import PackageJSON from '~/../package.json'
+
+export default {
+  middleware: ['auth'],
+  data() {
+    return {
+      message: '',
+      fileDragOver: false,
+      notificationSound: null,
+      version: PackageJSON.version
+    }
+  },
+  computed: {
+    isCallAvailable() {
+      return this.$store.state.isConnected || (this.$store.getters.partner && this.$store.getters.partner.call.connection)
+    },
+    isFileAvailable() {
+      return this.$store.state.isConnected || (this.$store.getters.partner && this.$store.getters.partner.file.connection)
+    }
+  },
+  created() {
+    this.$store.dispatch('loadSounds')
+  },
+  mounted() {
+    document.addEventListener('visibilitychange', () => {
+      if(document.visibilityState === 'visible')
+        this.$store.dispatch('setVisible', true)
+      else if(document.visibilityState === 'hidden')
+        this.$store.dispatch('setVisible', false)
+    })
+
+    if(Notification && Notification.permission == 'default')
+      this.$store.dispatch('popUp/open', 'notification')
+
+    if(localStorage['showChangelog']) {
+      this.$axios.$get(`/changelog/${localStorage['showChangelog']}`)
+        .then( changelog => {
+          if(Object.keys(changelog).length)
+            this.$store.dispatch('popUp/set', {popUp: 'changelog', value: {title: 'Recent changes', log: changelog}})
+        })
+        .catch( err => {
+          console.error(err)
+          alertBox('Updated successfully!', 'Could not load changelog')
+        })
+        .finally( () => delete localStorage['showChangelog'] )
+    }
+  },
+  methods: {
+    send() {
+      this.message = this.message.trim()
+
+      if(this.message)
+        this.$store.dispatch('sendMessage', {message: this.message})
+
+      this.message = ''
+    },
+    openFilePicker() {
+      this.$refs.file.click()
+    },
+    sendFiles(files = this.$refs.file.files) {
+      if(!files.length) return
+
+      this.$store.dispatch('sendFiles', {files})
+        .then( () => this.$refs.file.value = '' )
+    },
+    hanldeDrop(event) {
+      event.preventDefault()
+
+      let files = 
+        event.dataTransfer.items
+          ? 
+        [...event.dataTransfer.items].filter(i => i.kind == 'file').map(i => i.getAsFile())
+          :
+        event.dataTransfer.files
+
+      this.sendFiles(files)
+      this.fileDragOver = false
+    },
+    handleDragOver(event) {
+      event.preventDefault()
+      this.fileDragOver = true
+    },
+    handleDragLeave(event) {
+      event.preventDefault()
+      this.fileDragOver = false
+    },
+    formatTimeStamp(timeStamp) {
+      let date = new Date(timeStamp)
+      let hours = date.getHours().toString().padStart(2, '0')
+      let minutes = date.getMinutes().toString().padStart(2, '0')
+
+      return `${hours}:${minutes}`
+    },
+    showChangeLog() {
+      this.$axios.$get('/changelog')
+        .then( changelog => this.$store.dispatch('popUp/set', {popUp: 'changelog', value: {title: 'Changelog', log: changelog}}) )
+        .catch( err => {
+          console.error(err)
+          errorBox('Error!', 'Could not load changelog')
+        })
+    }
+  },
+  watch: {
+    '$store.getters.partnerFriend': function() {
+      if(!this.$store.getters.partnerFriend) return
+
+      if(this.$store.state.filesFromShare.length)
+        this.$store.dispatch('popUp/open', 'filesFromShare')
+    }
+  },
+  components: {
+    Call,
+    Settings
+  }
+}
+</script>
+
+<style scoped>
+.blank-index {
+  font-size: 20px;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  right: 0;
+}
+.blank-index .profile {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color var(--speed-normal);
+}
+.blank-index .profile:hover {
+  background-color: var(--accent-color);
+}
+.blank-index .profile span {
+  color: var(--accent-color);
+  transition: color var(--speed-normal);
+}
+.blank-index .profile:hover span {
+  color: var(--bg-color);
+}
+.blank-index .avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-color: var(--bg-color);
+  border: 4px solid var(--green);
+  margin-left: 10px;
+}
+.blank-index .content {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  max-width: 70%;
+  max-height: 70%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.blank-index .content img {
+  width: 500px;
+  max-width: 100%;
+  max-height: 100%;
+  pointer-events: none;
+}
+.inCall .blank-index .content img {
+  display: none;
+}
+.blank-index .content p {
+  color: var(--accent-color);
+  margin-top: 60px;
+  font-size: 24px;
+}
+.blank-index .content .mobile {
+  display: none;
+}
+.blank-index .version {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 14px;
+  color: var(--accent-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.index {
+  display: flex;
+  flex-direction: column;
+  /* padding-bottom: 5px; */
+}
+.header {
+  display: flex;
+  padding: 10px 20px;
+  justify-content: space-between;
+  align-items: center;
+}
+.header i {
+  cursor: pointer;
+  font-size: 24px;
+  transition: var(--speed-fast)
+}
+.header i:hover {
+  color: var(--accent-color);
+}
+.header .fa-phone {
+  margin-right: 10px
+}
+.unavailable {
+  color: var(--grey) !important;
+  cursor: default !important;
+}
+.unavailable:hover {
+  color: var(--grey) !important;
+}
+.messages {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-end;
+  height: 100%;
+  overflow: auto;
+}
+.drag-topper {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+
+  background: var(--topper-bg);
+  backdrop-filter: blur(3px);
+  pointer-events: none;
+}
+.drag-topper p {
+  font-size: 24px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  white-space: nowrap;
+}
+.message {
+  max-width: 70%;
+  border-radius: 0 15px 15px 0;
+  margin: 1px 0;
+}
+.message:not(.file) {
+  background: var(--accent-color) !important;
+}
+.message i {
+  display: inline-block;
+  margin-left: 10px;
+}
+.message p {
+  padding: 5px 15px 5px 20px;
+  font-size: var(--p-size);
+  user-select: text;
+  word-break: break-all;
+}
+.percent {
+  height: 5px;
+  background: purple;
+}
+.own {
+  align-self: flex-end;
+  border-radius: 15px 0 0 15px;
+}
+.own p {
+  padding: 5px 20px 5px 15px;
+}
+.bottom {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  background: var(--side-color);
+  border-radius: 50px;
+  padding-right: 10px;
+  margin: 10px 20px 5px;
+  overflow: hidden;
+}
+.bottom input {
+  width: 100%;
+  height: 45px;
+  padding-left: 15px;
+  border: none;
+  font-size: 16px;
+}
+.icons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 5px;
+}
+.icons i {
+  font-size: 26px;
+  margin: 0 10px;
+  cursor: pointer;
+  transition: var(--speed-fast)
+}
+.icons i:hover {
+  color: var(--accent-color);
+}
+.blank-index .content .file-from-share {
+  white-space: normal;
+  text-align: center;
+}
+
+@media screen and (max-width: 800px) {
+  .blank-index {
+    position: absolute;
+  }
+  .blank-index .content .desktop {
+    display: none;
+  }
+  .blank-index .content .mobile {
+    display: block;
+  }
+  .bottom {
+    margin: 10px 10px 5px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .blank-index .content p {
+    font-size: 20px;
+    white-space: nowrap;
+  }
+}
+</style>

@@ -1,0 +1,108 @@
+:root {
+  --bg-color: #645d6b;
+  --side-color: #3e3943;
+  --accent-color: #ac9fbb;
+  --topper-bg: rgba(0, 0, 0, 0.55);
+  --white: #f9f9f9;
+  --red: #ff7070;
+  --green: #39dd75;
+  --yellow: #ffa600;
+  --grey: #989aaf;
+  
+  --speed-normal: .3s;
+  --speed-fast: .1s;
+  --shadow-color: rgba(0, 0, 0, 0.6);
+
+  --h1-size: 36px;
+  --h2-size: 20px;
+  --p-size: 18px;
+}
+
+@font-face {
+  font-family: Roboto;
+  src: url('/font/Roboto-Regular.ttf');
+  font-weight: normal;
+}
+
+html {
+  background: var(--bg-color);
+  color: var(--white);
+}
+
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+html i {
+  cursor: pointer;
+}
+
+html .topper {
+  background: var(--topper-bg);
+  backdrop-filter: blur(3px);
+
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  z-index: 1;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent
+}
+*:focus {
+  outline: none;
+}
+
+input {
+  user-select:auto;
+}
+
+h1, h2, h3, h4, h5, h6, p, div, pre {
+  font-family: Roboto;
+  font-display: swap;
+}
+
+.page-enter-active,
+.page-leave-active,
+.layout-enter-active, 
+.layout-leave-active {
+  transition: opacity .3s;
+}
+
+.page-enter,
+.page-leave-active,
+.layout-enter, 
+.layout-leave-active {
+  opacity: 0
+}
+
+.pop-enter-active, .pop-leave-active {
+  transition: var(--speed-normal);
+}
+
+@media screen and (min-width: 600px) {
+  /* scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background-color: var(--side-color);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+}

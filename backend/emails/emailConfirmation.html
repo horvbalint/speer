@@ -1,0 +1,61 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <title></title>
+    
+    <style type="text/css">
+      body {
+        background: white;
+      }
+      * {
+        color: #645d6b;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      p, a {
+        font-weight: 500;
+      }
+      a:link, a:visited, a:hover, a:active {
+        color: #ac9fbb;
+      }
+      a {
+        word-break: break-all;
+      }
+      .wrapper {
+        width: 500px;
+        max-width: 90%;
+        margin: 20px auto;
+      }
+      .wrapper h1 {
+        margin-bottom: 20px;
+      }
+      .wrapper p {
+        font-size: 14px;
+      }
+      .wrapper a {
+        display: block;
+        margin: 5px 0 10px;
+      }
+      .bottom {
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <h1>Hi {{USERNAME}}, welcome to Speer!</h1>
+      
+      <p>To finalize you registration please confirm your email address by clicking the following link:</p>
+      <a href="{{URL}}" target="_blank" rel="noopener">{{URL}}</a>
+      
+      <p>Speer is an open source project which heavily depends on its community. Please consider being an active part of this group and join Speer's development by coming up with new ideas, finding bugs or developing new features, if you have the skills nessesary.</p>
+      
+      <p class="bottom">Have a great day!</p>
+      <p><strong>The Speer Community</strong></p>
+    </div>
+  </body>
+</html>

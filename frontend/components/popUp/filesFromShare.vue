@@ -1,0 +1,99 @@
+<template>
+  <PopUp
+    title="Action needs confirmation"
+    icon="fas fa-file"
+    :buttons="buttons"
+  >
+    <div class="img" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.getters.partnerFriend.avatar}')`}"/>
+    <p class="description">Do you want to send to '{{$store.getters.partnerFriend.username}}' these files:</p>
+
+    <div class="file" v-for="(file, index) in $store.state.filesFromShare" :key="`${file}-${index}`">
+      <p>Filename: <span>{{file.name}}</span></p>
+      <p>Size: <span>{{getFileSize(file.size)}}</span></p>
+    </div>
+
+    <p class="description">?</p>
+  </PopUp>
+</template>
+
+<script>
+import PopUp from '~/components/popUp/popUp'
+
+export default {
+  data() {
+    return {
+      acceptAll: false,
+      preview: false,
+      buttons: [
+        {
+          text: 'Cancel',
+          action: () => this.$store.dispatch('popUp/close', 'filesFromShare')
+        },
+        {
+          text: 'Send',
+          action: () => {
+            this.$store.dispatch('sendFiles', {files: this.$store.state.filesFromShare})
+            this.$store.dispatch('setFilesFromShare', [])
+            this.$store.dispatch('popUp/close', 'filesFromShare')
+          }
+        }
+      ]
+    }
+  },
+  methods: {
+    getFileSize(size) {
+      if(size < 1_000_000) return `${(size/1_000).toFixed(2)} KB`
+      if(size < 1_000_000_000) return `${(size/1_000_000).toFixed(2)} MB`
+      return `${(size/1_000_000_000).toFixed(2)} GB`
+    }
+  },
+  components: {
+    PopUp
+  }
+}
+</script>
+
+<style scoped>
+.img {
+  width: 100px;
+  height: 100px;
+  border-radius: 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  border: 3px solid var(--accent-color);
+  margin: 15px auto 10px;
+  cursor: pointer;
+  position: relative;
+}
+.description {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.file {
+  margin-bottom: 20px;
+}
+.file p {
+  text-align: center;
+  margin: 3px 0;
+  font-weight: bold;
+}
+.file p span {
+  font-weight: normal;
+}
+.option {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.option input {
+  margin-right: 5px;
+}
+@media screen and (max-width: 600px) {
+  .img {
+    width: 130px;
+    height: 130px;
+  }
+}
+</style>
