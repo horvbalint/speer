@@ -43,7 +43,7 @@
 
 ### Push notifications
 
-  As mentioned before, Speer connects you to your partner directly leaving out servers from the data-flow. But this also means that you communicate with someone who is not online. To overcome this problem one can register its devices to receive push notifications. If you want to talk to someone who has notification devices configured but is not online, you can "ping" (send a short message to) them to let them know that you want to talk to them.
+  As mentioned before, Speer connects you to your partner directly leaving out servers from the data-flow. But this also means that you can't talk with someone who is not online. To overcome this problem, one can register its devices to receive push notifications. If you want to talk to someone who has notification devices configured but is not online, you can "ping" (send a short message to) them to let them know that you want to talk to them.
 
 
 ## Donation
@@ -61,7 +61,7 @@
 
 ## Disclaimer
 
-  This project is still in development and altough it is fairly stable you might encounter problems. I take no responsibility for any damage caused by Speer.
+  This project is still in development and although it is fairly stable you might encounter problems. I take no responsibility for any damage caused by Speer.
 
 
 ## Development
