@@ -1,7 +1,7 @@
 <template>
-  <div class="confirm-popup">
+  <div class="cancel-popup">
     <h1>Speer</h1>
-    <p>Checking confirmation success</p>
+    <p>Canceling registration</p>
     <i class="fas fa-spinner fa-pulse"/>
   </div>
 </template>
@@ -11,26 +11,31 @@ export default {
   layout: 'login',
   data() {
     return {
-      confirmStart: 0,
+      cancelStart: 0,
     }
   },
   mounted() {
-    this.confirmStart = Date.now()
+    if(!this.$route.query.token) {
+      this.$router.push('/login')
+      return
+    }
 
-    this.$axios.$post(`/confirm/${this.$route.params.token}`)
+    this.cancelStart = Date.now()
+
+    this.$axios.$post(`/cancel/${this.$route.query.token}`)
       .then( () => {
-        let delta = Date.now() - this.confirmStart
+        let delta = Date.now() - this.cancelStart
 
         setTimeout( () => {
-          successBox("Email confirmed!", "You can now log in")
+          successBox("Registration canceled!", "You can register later anytime if you want")
           this.$router.push('/login')
         }, Math.max(1500 - delta, 0) )
       })
       .catch( () => {
-        let delta = Date.now() - this.confirmStart
+        let delta = Date.now() - this.cancelStart
 
         setTimeout( () => {
-          errorBox("Confirmation failed!", "Please try again")
+          errorBox("Cancellation failed!", "There was an error, try again later")
           this.$router.push('/login')
         }, Math.max(1500 - delta, 0) )
       })
@@ -39,7 +44,7 @@ export default {
 </script>
 
 <style scoped>
-.confirm-popup {
+.cancel-popup {
   position: fixed;
   top: 50%;
   left: 50%;
