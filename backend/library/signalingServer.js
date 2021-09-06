@@ -3,8 +3,9 @@ const SessionParser = require('../globals/sessionParser')
 
 // A class that creates a WebSocket server and handles all the work of a Signal Server
 module.exports = class SignalingServer {
-  constructor(server, port, onConnect = this.logStatus, onClose = this.logStatus) {
+  constructor(server, port, validateSignal = () => Promise.resolve(), onConnect = this.logStatus, onClose = this.logStatus) {
     this.connectedSockets = {}
+    this.validateSignal = validateSignal
     this.onConnect = onConnect
     this.onClose = onClose
     this.wss = new WebSocket.Server({
@@ -55,16 +56,26 @@ module.exports = class SignalingServer {
 
   handleSignal(message, ws) {
     message = JSON.parse(message)
-    if(!this.connectedSockets[message.remoteId]) return 
 
-    const rawMessage = {
-      action: 'signal',
-      peerData: message.peerData,
-      remoteId: ws.speerId,
-      type: message.type,
-      data: message.data
-    }
-    this.connectedSockets[message.remoteId].send( JSON.stringify(rawMessage) )
+    this.validateSignal(ws.speerId, message.remoteId)
+      .then( () => {
+        if(!this.connectedSockets[message.remoteId]) return
+    
+        const rawMessage = {
+          action: 'signal',
+          peerData: message.peerData,
+          remoteId: ws.speerId,
+          type: message.type,
+          data: message.data
+        }
+        this.connectedSockets[message.remoteId].send( JSON.stringify(rawMessage) )
+      })
+      .catch( err => {
+        ws.send(JSON.stringify({
+          error: 'Not friend',
+          remoteId: message.remoteId
+        }))
+      })
   }
 
   removeClient(Id) {

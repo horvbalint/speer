@@ -39,6 +39,15 @@ export default class PeerClient {
       // Handling message from signal server
       this._socket.addEventListener('message', event => {
         let data = JSON.parse(event.data)
+
+        if(data.error == 'Not friend') {
+          if(this._signaling[data.remoteId]) {
+            this._signaling[data.remoteId].reject(data.error)
+            delete this._signaling[data.remoteId]
+          }
+          
+          return
+        }
   
         if(!this._signaling[data.remoteId]) this._handleNewSignalConnection(data)
         else this._handleReceivedRequestedSignalData(data)
@@ -85,8 +94,8 @@ export default class PeerClient {
   // Sending connection request to remote peer / feeding new peerData to Simple-Peer
   _signal({remoteId, type, initiator = false, peerData = null}) {
     return new Promise( (resolve, reject) => {
-      let peer = this._createPeerForSignaling(remoteId, type, initiator)
-      this._signaling[remoteId] = {peer, resolve}
+      this._signaling[remoteId] = {resolve, reject} // this needs to exist before the peer is created
+      this._signaling[remoteId].peer = this._createPeerForSignaling(remoteId, type, initiator)
       
       if(peerData) this._signaling[remoteId].peer.signal(peerData)
     })
@@ -94,7 +103,7 @@ export default class PeerClient {
 
   _createPeerForSignaling(remoteId, type, initiator) {
     let peer = new Peer({initiator, trickle: true})
-      
+
     peer.on('signal', peerData => {
       this._send({
         action: 'signal',

@@ -385,8 +385,11 @@ export const actions = {
           resolve()
         })
         .catch( err => {
-          console.error(err)
-          errorBox('Error!', `Could not connect to ${ctx.state.friends[remoteId].username}`)
+          if(err == 'Not friend')
+            errorBox('Error!', 'This user is not your friend')
+          else
+            errorBox('Error!', `Could not connect to ${ctx.state.friends[remoteId].username}`)
+
           reject(err)
         })  
     })
@@ -500,8 +503,9 @@ export const actions = {
   },
   openPartner(ctx, partnerId) {
     ctx.commit('checkPartnerState', partnerId)
-    ctx.dispatch('checkTextConnection', partnerId)    
-    ctx.commit('setPartnerId', partnerId)
+    ctx.dispatch('checkTextConnection', partnerId)
+      .then( () => ctx.commit('setPartnerId', partnerId) )
+      .catch( err => console.error(err) )
   },
   closeParnter(ctx) {
     ctx.commit('setPartnerId', null)

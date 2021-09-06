@@ -16,7 +16,7 @@
         <p class="desktop">Choose someone from the sidebar to start chatting</p>
         <p class="mobile">Swipe from the left to see your friends</p>
       </template>
-      <p v-else class="file-from-share">Choose a friend who you want to share the files with</p>
+      <p v-else class="file-from-share">Choose a friend who you want to share the file(s) with</p>
     </div>
 
     <p class="version" @click="showChangeLog()">version {{version}}</p>
