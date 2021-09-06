@@ -134,7 +134,29 @@ router.post('/confirm/:token', (req, res) => {
       console.error(err)
       res.status(500).send(err)
     })
-  
+})
+
+router.post('/cancel/:token', (req, res) => {
+  Confirm.findOne({token: req.params.token})
+    .then( confirm => {
+      if(!confirm) return res.status(400).send('Invalid token')
+
+      User.deleteOne({_id: confirm.user, confirmed: false})
+        .then( () => {
+          res.send('ok')
+          
+          Confirm.deleteOne({token: req.params.token})
+          .catch( err => console.error(err) )
+        })
+        .catch( err => {
+          console.error(err)
+          res.status(500).send(err)
+        })
+    })
+    .catch( err => {
+      console.error(err)
+      res.status(500).send(err)
+    })
 })
 
 router.post('/resendConfirmation/:email', (req, res) => {

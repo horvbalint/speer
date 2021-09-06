@@ -22,6 +22,7 @@
         color: #ac9fbb;
       }
       a {
+        display: block;
         word-break: break-all;
       }
       .wrapper {
@@ -35,12 +36,16 @@
       .wrapper p {
         font-size: 14px;
       }
-      .wrapper a {
-        display: block;
+      .confirm {
         margin: 5px 0 10px;
       }
       .bottom {
         margin-top: 20px;
+      }
+      .cancel {
+        display: block;
+        margin-top: 20px;
+        font-size: 10px;
       }
     </style>
   </head>
@@ -50,9 +55,11 @@
       <h1>Hi {{USERNAME}}, welcome to Speer!</h1>
       
       <p>To finalize you registration please confirm your email address by clicking the following link:</p>
-      <a href="{{URL}}" target="_blank" rel="noopener">{{URL}}</a>
+      <a class="confirm" href="{{CONFIRM_URL}}" target="_blank" rel="noopener">{{CONFIRM_URL}}</a>
       
-      <p>Speer is an open source project which heavily depends on its community. Please consider being an active part of this group and join Speer's development by coming up with new ideas, finding bugs or developing new features, if you have the skills nessesary.</p>
+      <p class="main">Speer is an open source project which heavily depends on its community. Please consider being an active part of this group and join Speer's development by coming up with new ideas, finding bugs or developing new features, if you have the skills nessesary.</p>
+      
+      <a class="cancel" href="{{CANCEL_URL}}" target="_blank" rel="noopener">If it wasn't you who registered with this email, click here to cancel it.</a>
       
       <p class="bottom">Have a great day!</p>
       <p><strong>The Speer Community</strong></p>

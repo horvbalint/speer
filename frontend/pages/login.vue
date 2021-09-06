@@ -1,5 +1,5 @@
 <template>
-  <div class="login" v-if="!confirming">
+  <div class="login">
     <h1>Speer</h1>
     <div class="main" v-if="mode == 'login'">
       <input v-model="user.email" type="email" placeholder="E-mail" key="login-email">
@@ -24,13 +24,6 @@
         <p @click="mode = 'login'">or log-in</p>
       </div>
     </div>
-
-  </div>
-
-  <div v-else class="confirm-popup">
-    <h1>Speer</h1>
-    <p>Checking confirmation success</p>
-    <i class="fas fa-spinner fa-pulse"/>
   </div>
 </template>
 
@@ -39,8 +32,6 @@ export default {
   layout: 'login',
   data() {
     return {
-      confirming: false,
-      confirmStart: 0,
       mode: 'login',
       user: {
         email: '',
@@ -50,34 +41,6 @@ export default {
       secondPassword: '',
       loading: false,
       resend: false,
-    }
-  },
-  mounted() {
-    if(this.$route.query.confirmToken) {
-      this.confirming = true
-      this.confirmStart = Date.now()
-
-      this.$axios.$post(`/confirm/${this.$route.query.confirmToken}`)
-        .then( () => {
-          let delta = Date.now() - this.confirmStart
-
-          setTimeout( () => {
-            this.confirming = false
-            successBox("Email confirmed!", "You can now log in")
-
-            this.$router.push('/login')
-          }, Math.max(1500 - delta, 0) )
-        })
-        .catch( () => {
-          let delta = Date.now() - this.confirmStart
-
-          setTimeout( () => {
-            this.confirming = false
-            errorBox("Confirmation failed", "Please try again")
-
-            this.$router.push('/login')
-          }, Math.max(1500 - delta, 0) )
-        })
     }
   },
   methods: {
@@ -141,7 +104,10 @@ export default {
         .then( () => {
           this.resend = false
 
-          alertBox('Confirmation email sent!', 'Please follow the instructions in the email sent to your address to finalize the registration')
+          if(process.env.NODE_ENV == 'development')
+            alertBox('Check the backend\'s logs!', 'Please click the url in the logs to finalize the registration')
+          else
+            alertBox('Confirmation email sent!', 'Please follow the instructions in the email sent to your address to finalize the registration')
         })
         .catch( err => {
           this.resend = false
@@ -209,26 +175,6 @@ input {
   text-align: center;
   text-decoration: underline;
   cursor: pointer;
-}
-.confirm-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  background: var(--accent-color);
-  padding: 20px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 400px;
-}
-.confirm-popup p {
-  margin-bottom: 20px;
-  font-size: 25px;
-}
-.confirm-popup i {
-  font-size: 30px;
-  cursor: default;
 }
 .resend {
   text-decoration: underline;
