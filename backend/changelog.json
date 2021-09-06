@@ -1,4 +1,13 @@
 {
+  "1.4.7": {
+    "title": "Security improvements",
+    "changes": [
+      "If someone else registers with your email address, you can cancell it by following the link in the confirmation email",
+      "Non-friend users now have no way to even signal each other"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
   "1.3.7": {
     "title": "Open sourced",
     "changes": [
