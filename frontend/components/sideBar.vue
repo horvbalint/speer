@@ -9,6 +9,7 @@
         v-for="user in onlines"
         :key="user._id"
         :user="user"
+        :connecting="connecting == user._id"
         @click="openPartner(user)"
       />
       <UserCard
@@ -29,6 +30,11 @@
 import UserCard from '~/components/userCard'
 
 export default {
+  data() {
+    return {
+      connecting: null,
+    }
+  },
   computed: {
     onlines() {
       return Object.values(this.$store.state.friends).filter(user => user.online)
@@ -39,6 +45,8 @@ export default {
   },
   methods: {
     openPartner(user) {
+      if(this.connecting) return
+
       if(!this.$store.state.isConnected && !this.$store.state.partners[user._id]) {
         warningBox('You are not connected to the server!', 'Try to reload the page and check your network connection', {
           text: 'Reload',
@@ -48,8 +56,12 @@ export default {
         return
       }
 
+      this.connecting = user._id
+
       this.$store.dispatch('openPartner', user._id)
-      this.$emit('close')
+        .then( () => this.$emit('close') )
+        .catch( err => console.error(err) )
+        .finally( () => this.connecting = null )
     },
     pingUser(user) {
       this.$store.dispatch('popUp/set', {popUp: 'ping', value: user})

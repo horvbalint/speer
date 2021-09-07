@@ -502,10 +502,15 @@ export const actions = {
     ctx.commit('setFriends', friends)
   },
   openPartner(ctx, partnerId) {
-    ctx.commit('checkPartnerState', partnerId)
-    ctx.dispatch('checkTextConnection', partnerId)
-      .then( () => ctx.commit('setPartnerId', partnerId) )
-      .catch( err => console.error(err) )
+    return new Promise( (resolve, reject) => {
+      ctx.commit('checkPartnerState', partnerId)
+      ctx.dispatch('checkTextConnection', partnerId)
+        .then( () => {
+          ctx.commit('setPartnerId', partnerId)
+          resolve()
+        })
+        .catch( err => reject(err) )
+    })
   },
   closeParnter(ctx) {
     ctx.commit('setPartnerId', null)

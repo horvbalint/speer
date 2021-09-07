@@ -10,7 +10,8 @@
     <div class="avatar" :style="{'background-image': `url('${$store.state.backendURL}/static/${user.avatar}')`}"></div>
     <div class="texts">
       <p class="name">{{ user.username }}</p>
-      <p v-if="lastMessage" class="last-message">{{lastMessage.message}}</p>
+      <p v-if="connecting" class="last-message">Connecting...</p>
+      <p v-else-if="lastMessage" class="last-message">{{lastMessage.message}}</p>
     </div>
   </div>
 </template>
@@ -22,6 +23,10 @@ export default {
       type: Object,
       default: () => ({})
     },
+    connecting: {
+      type: Boolean,
+      default: false
+    }
   },
   computed: {
     friendText() {
