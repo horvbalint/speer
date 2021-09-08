@@ -107,7 +107,7 @@ export const mutations = {
         constraints: {
           video: {
             height: { max: 1080 },
-            frameRate: { max: 20 },
+            frameRate: { max: 25 },
           },
           audio: {
             echoCancellation: true,
@@ -286,7 +286,7 @@ export const mutations = {
     state.partners[remoteId].call.constraints = {
       video: {
         height: { max: 1080 },
-        frameRate: { max: 20 },
+        frameRate: { max: 25 },
       },
       audio: {
         echoCancellation: true,

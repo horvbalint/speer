@@ -7,7 +7,7 @@
 
 ## Why to use Speer?
 
-  - Speer was built with **privacy** in mind. All of the data sent is encrypted and none of it will go trough or be saved on third-party servers. The data you send is only your and your partners buisness. 
+  - Speer was built with **privacy** in mind. All of the data sent to a friend is encrypted and none of it will go trough or be saved on servers. The data you send is only your and your partners buisness. 
   - Speer is **lightweight**, your device is less likely to slow down during calls than while using other screen-sharing solutions. And if it does, you can **customize** Speer to suit your needs even better.
   - Speer is **cross platform**. It can be used on any OS which supports modern browsers. Yes it even works on mobile! You can install Speer from the browser with a single click to unlock even more features.
   - Speer is **free and open source** (FOSS). How would you trust a software that it doesn't spy on your data, when no one can see its internal workings? You shouldn't and luckily you don't have to. Speer's code is visible for everyone and you can use it for free!
@@ -44,6 +44,8 @@
 ### Push notifications
 
   As mentioned before, Speer connects you to your partner directly leaving out servers from the data-flow. But this also means that you can't talk with someone who is not online. To overcome this problem, one can register its devices to receive push notifications. If you want to talk to someone who has notification devices configured but is not online, you can "ping" (send a short message to) them to let them know that you want to talk to them.
+  
+  > Note: Push notifications will be stored on third-party servers (like Google), but will be encrypted.
 
 
 ## Donation
