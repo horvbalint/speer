@@ -15,6 +15,8 @@ export const mutations = {
 
 export const actions = {
   call(ctx, {remoteId = ctx.rootState.partnerId, video = false}) {
+    if(ctx.rootState.connecting.call) return
+
     ctx.commit('setCallPartner', ctx.rootState.friends[remoteId])
     ctx.dispatch('checkCallConnection', remoteId)
     .then( () => navigator.mediaDevices.getUserMedia({audio: ctx.rootGetters.call.constraints.audio, video: false}) )
@@ -44,6 +46,7 @@ export const actions = {
         return reject()
       }
 
+      ctx.commit('setConnecting', {type: 'call', value: remoteId}, {root: true})
       ctx.rootState.client.createCallConnection(remoteId)
       .then( connection => {
         ctx.dispatch('setCallConnectionListeners', {remoteId, connection})
@@ -52,6 +55,7 @@ export const actions = {
         resolve()
       })
       .catch( err => reject(err) )
+      .finally( () => ctx.commit('setConnecting', {type: 'call', value: false}, {root: true}) )
     })
   },
   checkCallConnection(ctx, partnerId) {

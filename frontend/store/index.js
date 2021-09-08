@@ -30,8 +30,16 @@ export const state = () => ({
   frontendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun',
   // backendURL: 'http://localhost:9001',
   // frontendURL: 'http://localhost:9000',
-  messageSound: null, // sound to play when a message is received
-  callSound: null, // sound to play when a call is received
+  sounds: {
+    message: null, // sound to play when a message is received
+    call: null, // sound to play when a call is received
+    callWaiting: null, // sound to play when a call is waiting
+  },
+  connecting: {
+    text: false,
+    file: false,
+    call: false,
+  }
 })
 
 export const getters = {
@@ -138,12 +146,12 @@ export const mutations = {
 
     if(remoteId != state.partnerId) {
       state.partners[remoteId].text.unread = true
-      state.messageSound.currentTime = 0
-      state.messageSound.play().catch(err => {})
+      state.sounds.message.currentTime = 0
+      state.sounds.message.play().catch(err => {})
     }
     else if(!state.pageVisible) {
-      state.messageSound.currentTime = 0
-      state.messageSound.play().catch(err => {})
+      state.sounds.message.currentTime = 0
+      state.sounds.message.play().catch(err => {})
     }
   },
   removeMessage(state, {remoteId, index}) {
@@ -172,8 +180,16 @@ export const mutations = {
     state.frontendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun'
     // state.backendURL = 'http://localhost:9001'
     // state.frontendURL = 'http://localhost:9000'
-    state.messageSound = null
-    state.callSound = null
+    state.sounds = {
+      message: null,
+      call: null,
+      callWaiting: null,
+    }
+    state.connecting = {
+      text: false,
+      file: false,
+      call: false,
+    }
   },
   setSideBarDrag(state, drag) {
     state.sideBarDrag = drag
@@ -233,9 +249,13 @@ export const mutations = {
   setUserAvatar(state, avatar) {
     state.user.avatar = avatar
   },
-  setSounds(state, {message, call}) {
-    state.messageSound = message
-    state.callSound = call
+  setSounds(state, {message, call, callWaiting}) {
+    state.sounds.message = message
+    state.sounds.call = call
+    state.sounds.callWaiting = callWaiting
+  },
+  setSound(state, {name, sound}) {
+    state.sounds[name] = sound
   },
   setVisible(state, visible) {
     state.pageVisible = visible
@@ -308,6 +328,9 @@ export const mutations = {
   setConstraints(state, {remoteId, constraints}) {
     state.partners[remoteId].call.constraints = constraints
   },
+  setConnecting(state, {type, value}) {
+    state.connecting[type] = value
+  },
 }
 
 export const actions = {
@@ -378,6 +401,7 @@ export const actions = {
   },
   createTextConnection(ctx, remoteId) {
     return new Promise( (resolve, reject) => {
+      ctx.commit('setConnecting', {type: 'text', value: remoteId})
       ctx.state.client.createConnection(remoteId)
         .then( connection => {
           setTextConnectionListeners(ctx, remoteId, connection)
@@ -391,7 +415,8 @@ export const actions = {
             errorBox('Error!', `Could not connect to ${ctx.state.friends[remoteId].username}`)
 
           reject(err)
-        })  
+        })
+        .finally( () => ctx.commit('setConnecting', {type: 'text', value: false}) )
     })
   },
   checkTextConnection(ctx, partnerId) {
@@ -411,6 +436,7 @@ export const actions = {
         return reject()
       }
 
+      ctx.commit('setConnecting', {type: 'file', value: remoteId})
       ctx.state.client.createFileConnection(remoteId)
         .then( connection => {
           setFileConnectionListeners(ctx, remoteId, connection)
@@ -422,6 +448,7 @@ export const actions = {
           errorBox('Error!', `Could not connect to ${ctx.state.friends[remoteId].username}`)
           reject()
         })
+        .finally( () => ctx.commit('setConnecting', {type: 'file', value: false}) )
     })
   },
   checkFileConnection(ctx, partnerId) {
@@ -596,10 +623,12 @@ export const actions = {
   loadSounds(ctx) {
     let message = new Audio(`${ctx.state.frontendURL}/message.mp3`)
     let call = new Audio(`${ctx.state.frontendURL}/call.mp3`)
+    let callWaiting = new Audio(`${ctx.state.frontendURL}/callWaiting.mp3`)
 
     call.loop = true
+    callWaiting.loop = true
 
-    ctx.commit('setSounds', {message, call})
+    ctx.commit('setSounds', {message, call, callWaiting})
   },
   setVisible(ctx, visible) {
     ctx.commit('setVisible', visible)
@@ -612,6 +641,15 @@ export const actions = {
   },
   setIsConnected(ctx, value) {
     ctx.commit('setIsConnected', value)
+  },
+  stopSound(ctx, name) {
+    ctx.state.sounds[name].pause()
+    let sound = new Audio(`${ctx.state.frontendURL}/${name}.mp3`)
+
+    if(name.startsWith('call'))
+      sound.loop = true
+
+    ctx.commit('setSound', {name, sound})
   },
   logout(ctx) {
     if(ctx.state.client)
@@ -649,5 +687,9 @@ function setFileConnectionListeners(ctx, remoteId, connection) {
 
     if(ctx.state.partners[remoteId].file.acceptAllInSession)
       ctx.dispatch('acceptFile', false)
+    else {
+      ctx.state.sounds.message.currentTime = 0
+      ctx.state.sounds.message.play().catch(err => {})
+    }
   }
 }

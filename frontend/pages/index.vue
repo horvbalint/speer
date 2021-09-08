@@ -30,7 +30,10 @@
     <div class="header">
       <i class="fas fa-arrow-left" @click="$store.dispatch('closeParnter')"/>
       <h2>{{ $store.getters.partnerFriend.username }}</h2>
-      <div v-if="!$store.getters.call.isInCall">
+      <div
+        v-if="!$store.getters.call.isInCall"
+        :class="{connecting: $store.state.connecting.call == $store.getters.partnerFriend._id}"
+      >
         <i
           class="fas fa-phone"
           :class="{unavailable: !isCallAvailable}"
@@ -70,7 +73,14 @@
       <input type="file" multiple hidden ref="file" @change="sendFiles()">
       
       <div class="icons">
-        <i class="fas fa-file-medical" :class="{unavailable: !isFileAvailable}" @click="openFilePicker()"></i>
+        <i
+          class="fas fa-file-medical"
+          :class="{
+            unavailable: !isFileAvailable,
+            connecting: $store.state.connecting.file == $store.getters.partnerFriend._id,
+          }"
+          @click="openFilePicker()"
+        ></i>
         <i class="fas fa-paper-plane" @click="send()"></i>
       </div>
     </div>
@@ -78,7 +88,6 @@
 </template>
 
 <script>
-import Call from '~/components/call'
 import Settings from '~/components/popUp/settings'
 import PackageJSON from '~/../package.json'
 
@@ -140,7 +149,7 @@ export default {
       this.$refs.file.click()
     },
     sendFiles(files = this.$refs.file.files) {
-      if(!files.length) return
+      if(!files.length || this.$store.state.connecting.file) return
 
       this.$store.dispatch('sendFiles', {files})
         .then( () => this.$refs.file.value = '' )
@@ -191,7 +200,6 @@ export default {
     }
   },
   components: {
-    Call,
     Settings
   }
 }
@@ -400,6 +408,43 @@ export default {
 .blank-index .content .file-from-share {
   white-space: normal;
   text-align: center;
+}
+.connecting {
+  position: relative;
+}
+.connecting::after {
+  content: '';
+  display: block;
+  position: absolute;
+  bottom: -5px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--green);
+  transform: translateX(-50%);
+  animation: connecting 1s ease-in-out infinite alternate;
+}
+
+@keyframes connecting {
+  0% {
+    left: -4%;
+    width: 3px;
+  }
+  5% {
+    left: -4%;
+    width: 3px;
+  }
+  50% {
+    left: 51%;
+    width: 50%;
+  }
+  95% {
+    left: calc(106%);
+    width: 3px;
+  }
+  100% {
+    left: calc(106%);
+    width: 3px;
+  }
 }
 
 @media screen and (max-width: 800px) {

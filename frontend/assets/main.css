@@ -93,6 +93,7 @@ h1, h2, h3, h4, h5, h6, p, div, pre {
   /* scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
   }
   
   ::-webkit-scrollbar-track {

@@ -4,12 +4,18 @@
       <h1>Speer</h1>
     </div>
 
-    <div class="main">
+    <div v-if="!Object.keys($store.state.friends).length" class="no-friends">
+      <i class="fas fa-users"/>
+      <p>You have no friends yet,</p>
+      <p>add them using the button below</p>
+    </div>
+
+    <div v-else class="main">
       <UserCard
         v-for="user in onlines"
         :key="user._id"
         :user="user"
-        :connecting="connecting == user._id"
+        :connecting="$store.state.connecting.text == user._id"
         @click="openPartner(user)"
       />
       <UserCard
@@ -30,11 +36,6 @@
 import UserCard from '~/components/userCard'
 
 export default {
-  data() {
-    return {
-      connecting: null,
-    }
-  },
   computed: {
     onlines() {
       return Object.values(this.$store.state.friends).filter(user => user.online)
@@ -45,7 +46,7 @@ export default {
   },
   methods: {
     openPartner(user) {
-      if(this.connecting) return
+      if(this.$store.state.connecting.text) return
 
       if(!this.$store.state.isConnected && !this.$store.state.partners[user._id]) {
         warningBox('You are not connected to the server!', 'Try to reload the page and check your network connection', {
@@ -56,12 +57,9 @@ export default {
         return
       }
 
-      this.connecting = user._id
-
       this.$store.dispatch('openPartner', user._id)
         .then( () => this.$emit('close') )
         .catch( err => console.error(err) )
-        .finally( () => this.connecting = null )
     },
     pingUser(user) {
       this.$store.dispatch('popUp/set', {popUp: 'ping', value: user})
@@ -97,6 +95,18 @@ h1 {
   overflow-x: hidden;
   overflow-y: auto;
 }
+.no-friends {
+  text-align: center;
+  color: var(--accent-color);
+  transform: translateY(-75px);
+}
+.no-friends i {
+  font-size: 65px;
+  margin-bottom: 15px;
+}
+.no-friends p:first-of-type {
+  font-size: 20px;
+}
 .bottom {
   background: var(--bg-color);
   text-align: center;
@@ -113,5 +123,18 @@ h1 {
 }
 .bottom:hover {
   background: var(--accent-color);
+}
+
+@media screen and (max-width: 600px) {
+  .no-friends i {
+    font-size: 75px;
+    margin-bottom: 20px;
+  }
+  .no-friends p:first-of-type {
+    font-size: 23px;
+  }
+  .no-friends p:last-of-type {
+    font-size: 18px;
+  }
 }
 </style>

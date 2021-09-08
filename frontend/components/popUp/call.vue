@@ -28,8 +28,8 @@ export default {
     }
   },
   created() {
-    this.$store.state.callSound.currentTime = 0
-    this.$store.state.callSound.play().catch(err => {})
+    this.$store.state.sounds.call.currentTime = 0
+    this.$store.state.sounds.call.play().catch(err => {})
 
     if(!this.$store.state.pageVisible) {
       document.title = `Incoming ${this.$store.state.popUp.call.properties.video ? 'video ' : ''}call - ${this.$store.state.popUp.call.caller.username}`
@@ -44,7 +44,7 @@ export default {
     }
   },
   beforeDestroy() {
-    this.$store.state.callSound.pause()
+    this.$store.dispatch('stopSound', 'call')
     document.title = 'Speer'
   },
   components: {
