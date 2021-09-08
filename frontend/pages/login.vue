@@ -1,29 +1,33 @@
 <template>
-  <div class="login">
-    <h1>Speer</h1>
-    <div class="main" v-if="mode == 'login'">
-      <input v-model="user.email" type="email" placeholder="E-mail" key="login-email">
-      <input v-model="user.password" @keyup.enter="login()" type="password" placeholder="Password" key="login-password">
+  <div class="page">
+    <div class="login">
+      <h1>Speer</h1>
+      <div class="main" v-if="mode == 'login'">
+        <input v-model="user.email" type="email" placeholder="E-mail" key="login-email">
+        <input v-model="user.password" @keyup.enter="login()" type="password" placeholder="Password" key="login-password">
 
-      <p v-if="resend" class="resend" @click="resendConfirmation()">Did not receive an email?</p>
+        <p v-if="resend" class="resend" @click="resendConfirmation()">Did not receive an email?</p>
 
-      <div class="buttons">
-        <button @click="login()" :disabled="loading">Log-in</button>
-        <p @click="mode = 'register'">or register</p>
+        <div class="buttons">
+          <button @click="login()" :disabled="loading">Log-in</button>
+          <p @click="mode = 'register'">or register</p>
+        </div>
+      </div>
+
+      <div class="main" v-else>
+        <input v-model="user.email" type="email" placeholder="E-mail" key="register-email">
+        <input v-model="user.username" type="text" placeholder="Username" key="register-username">
+        <input v-model="user.password" type="password" placeholder="Password" key="register-password">
+        <input v-model="secondPassword" @keyup.enter="register()" type="password" placeholder="Password again" key="register-second">
+
+        <div class="buttons">
+          <button @click="register()" :disabled="loading">Register</button>
+          <p @click="mode = 'login'">or log-in</p>
+        </div>
       </div>
     </div>
 
-    <div class="main" v-else>
-      <input v-model="user.email" type="email" placeholder="E-mail" key="register-email">
-      <input v-model="user.username" type="text" placeholder="Username" key="register-username">
-      <input v-model="user.password" type="password" placeholder="Password" key="register-password">
-      <input v-model="secondPassword" @keyup.enter="register()" type="password" placeholder="Password again" key="register-second">
-
-      <div class="buttons">
-        <button @click="register()" :disabled="loading">Register</button>
-        <p @click="mode = 'login'">or log-in</p>
-      </div>
-    </div>
+    <a class="learn-more" href="https://github.com/horvbalint/speer" target="_blank">Click here to learn more about Speer</a>
   </div>
 </template>
 
@@ -181,5 +185,26 @@ input {
   text-align: center;
   cursor: pointer;
   margin-top: 5px;
+}
+.learn-more {
+  display: block;
+  width: 100%;
+  position: fixed;
+  bottom: 10px;
+  text-align: center;
+  color: var(--accent-color);
+  font-size: 18px;
+}
+.learn-more:link {
+  color: var(--accent-color);
+}
+.learn-more:visited {
+  color: var(--accent-color);
+}
+.learn-more:hover {
+  color: var(--accent-color);
+}
+.learn-more:active {
+  color: var(--accent-color);
 }
 </style>
