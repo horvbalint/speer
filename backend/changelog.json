@@ -1,4 +1,14 @@
 {
+  "1.4.8": {
+    "title": "Polishes and updates",
+    "changes": [
+      "One can now see a loader while Speer is connecting to a friend",
+      "A new sound is playing while waiting for the call partner to respond",
+      "Added an indicator text that shows while you have no friends"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
   "1.4.7": {
     "title": "Security improvements",
     "changes": [
