@@ -1,4 +1,13 @@
 {
+  "1.4.9": {
+    "title": "Security and UI",
+    "changes": [
+      "Fixed two vulnerabilities pointed out here: https://natedotred.wordpress.com/2021/09/09/weaponizing-email-content-injection/",
+      "Added an 'Install' button to make this feature more discoverable"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
   "1.4.8": {
     "title": "Polishes and updates",
     "changes": [
