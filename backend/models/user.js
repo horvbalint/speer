@@ -3,7 +3,7 @@ const mongoose = require('mongoose')
 const UserSchema = mongoose.Schema({
   email: {type: String, required: true, unique: true, trim: true},
   password: {type: String, required: true},
-  username: {type: String, required: true, trim: true},
+  username: {type: String, required: true, minlength: 1, maxlength: 25, validate: /^[A-Za-z0-9 _]+$/},
   avatar: {type: String, default: 'avatar.jpg'},
   requests: {type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: []},
   friends: {type: [mongoose.Schema.Types.ObjectId], ref: 'User', default: []},

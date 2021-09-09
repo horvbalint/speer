@@ -83,8 +83,10 @@ router.post('/register', (req, res) => {
           res.send('ok')
         })
         .catch( err => {
-          console.error(err)
-          res.status(500).send(err)
+          if(err?.errors?.username?.properties?.type == 'user defined')
+            res.status(400).send('Invalid chars')
+          else
+            res.status(500).send('Failed')
           
           User.deleteOne({email: req.body.email})
             .catch( err => console.error(err) )
