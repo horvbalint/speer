@@ -126,7 +126,6 @@ export default class PeerClient {
   }
 
   _onCloseHandler(event) {
-    console.error('[PeerClient] - Connection lost. Reason:', event)
     this._open = false
     this._onClose(event)
 

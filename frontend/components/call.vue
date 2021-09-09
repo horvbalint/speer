@@ -246,6 +246,10 @@ export default {
   font-size: 32px;
   color: var(--accent-color);
   cursor: pointer;
+  opacity: .6;
+}
+.settings-btn:hover {
+  opacity: 1;
 }
 .settings label{
   display: block;

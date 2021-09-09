@@ -23,10 +23,9 @@ export default ({$axios, redirect, store}) => {
       resolve()
     })
     .catch( err => {
-      console.error(err)
-
       store.dispatch('logout')
       redirect('/login')
+      reject()
     })
   })
 }

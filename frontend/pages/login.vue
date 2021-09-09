@@ -15,8 +15,8 @@
       </div>
 
       <div class="main" v-else>
-        <input v-model="user.email" type="email" placeholder="E-mail" key="register-email">
-        <input v-model="user.username" type="text" placeholder="Username" key="register-username">
+        <input v-model="user.email" type="email" placeholder="Email" key="register-email" autocomplete="email">
+        <input v-model="user.username" type="text" maxlength="25" placeholder="Username" key="register-username">
         <input v-model="user.password" type="password" placeholder="Password" key="register-password">
         <input v-model="secondPassword" @keyup.enter="register()" type="password" placeholder="Password again" key="register-second">
 
@@ -49,8 +49,10 @@ export default {
   },
   methods: {
     register() {
-      if(!this.user.email || !this.user.password || !this.secondPassword) return errorBox('Error!', 'Fill in every input field')
+      if(!this.user.email || !this.user.username || !this.user.password || !this.secondPassword) return errorBox('Error!', 'Fill in every input field')
       if(this.user.password !== this.secondPassword) return errorBox('Error!', 'Passwords do not match')
+      if(!(/^[A-Za-z0-9 _]+$/).test(this.user.username)) return errorBox('Error!', 'Username can only contain letters, numbers, spaces and underscores')
+      if(this.user.username.length > 25) return errorBox('Error!', 'Username can not be longer than 25 characters')
       this.loading = true
 
       this.$axios.$post('/register', this.user)
@@ -67,6 +69,8 @@ export default {
 
           if(err.response.data == 'Email in use')
             errorBox('Email already in use!', 'Try logging in')
+          else if(err.response.data == 'Invalid chars')
+            errorBox('Invalid characters', 'Username can only contain letters, numbers, spaces and underscores')
           else
             errorBox('Uh-oh!', 'Something went wrong, try again later')
         })

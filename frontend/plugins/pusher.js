@@ -75,7 +75,6 @@ export default class Pusher {
   }
 
   _onCloseHandler(event) {
-    console.error('[Pusher] - Connection lost. Reason:', event)
     this._open = false
     this._onClose(event)
 

@@ -1,3 +1,4 @@
+const escapeHtml  = require('escape-html')
 const mailjet     = require('./mailjet')
 const path        = require('path')
 const fs          = require('fs')
@@ -14,7 +15,7 @@ function sendEmailConfirmation(username, email, token) {
       .then( html => {
         html = html.replace(/\{\{CONFIRM_URL\}\}/g, `https://speer.fun/confirm?token=${token}`)
         html = html.replace(/\{\{CANCEL_URL\}\}/g, `https://speer.fun/cancel?token=${token}`)
-        html = html.replace(/\{\{USERNAME\}\}/g, username)
+        html = html.replace(/\{\{USERNAME\}\}/g, escapeHtml(username))
 
         mailjet
           .post('send', {version: 'v3.1'})

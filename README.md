@@ -25,7 +25,9 @@
     - If you are using Linux or Mac OS you can only share the sound of a Chrome tab, but you can open your movies with the browser.
   - While watching the video you can still talk in the same app.
   
-  Using the in-call settings you can change the resolution and the frame rate of the stream you send to your partner just like the microphone or video input device. This makes it possible to adjust your stream to the current network conditions. 
+  Using the in-call settings you can change the resolution and the frame rate of the stream you send to your partner just like the microphone or video input device. This makes it possible to adjust your stream to the current network conditions.
+
+  Of course you can use Speer for regular microphone and webcam calls.
 
 ### Text messages
 

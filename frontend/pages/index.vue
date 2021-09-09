@@ -1,6 +1,14 @@
 <template>
   <div class="blank-index"  v-if="!$store.getters.partner">
     <div
+      v-if="beforeInstallPromptEvent"
+      class="install-btn"
+      @click="install()"
+    >
+      <i class="far fa-window-restore"/> Install
+    </div>
+
+    <div
     v-if="$store.state.user"
     class="profile"
     @click="$store.dispatch('popUp/open', 'settings')"
@@ -98,7 +106,8 @@ export default {
       message: '',
       fileDragOver: false,
       notificationSound: null,
-      version: PackageJSON.version
+      version: PackageJSON.version,
+      beforeInstallPromptEvent: null,
     }
   },
   computed: {
@@ -119,6 +128,8 @@ export default {
       else if(document.visibilityState === 'hidden')
         this.$store.dispatch('setVisible', false)
     })
+
+    window.addEventListener('beforeinstallprompt', event => this.beforeInstallPromptEvent = event)
 
     if(Notification && Notification.permission == 'default')
       this.$store.dispatch('popUp/open', 'notification')
@@ -189,6 +200,19 @@ export default {
           console.error(err)
           errorBox('Error!', 'Could not load changelog')
         })
+    },
+    async install() {
+      this.beforeInstallPromptEvent.prompt()
+
+      this.beforeInstallPromptEvent.userChoice
+        .then( ({outcome}) => {
+          if(outcome == 'accepted')
+            this.beforeInstallPromptEvent = null
+        })
+        .catch( err => {
+          errorBox('Error!', 'Something went wrong, try installing Speer later')
+          console.error(err)
+        })
     }
   },
   watch: {
@@ -212,6 +236,29 @@ export default {
   left: 0;
   bottom: 0;
   right: 0;
+}
+.blank-index .install-btn {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  height: 60px;
+  color: var(--accent-color);
+  font-size: 20px;
+  transition: color background-color var(--speed-normal);
+}
+.blank-index .install-btn:hover {
+  background-color: var(--accent-color);
+  color: var(--bg-color);
+}
+.blank-index i {
+  font-size: 25px;
+  margin-right: 10px;
 }
 .blank-index .profile {
   position: absolute;
