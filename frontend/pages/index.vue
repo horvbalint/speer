@@ -227,10 +227,8 @@ export default {
   },
   watch: {
     '$store.getters.partner': function() {
-      if(!this.$store.getters.partner) {
-        document.removeEventListener('paste', this.handlePaseEvent)
-        return
-      }
+      document.removeEventListener('paste', this.handlePaseEvent)
+      if(!this.$store.getters.partner) return
 
       if(this.$store.state.filesToConfirm.length)
         this.$store.dispatch('popUp/open', 'filesToConfirm')
