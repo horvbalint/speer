@@ -61,6 +61,7 @@
   - Push notifications are not supported in Safari
   - System audio sharing is only supported in Chrome
   - File sending in Firefox and Safari is only possible with a PonyFill which affects the performance a bit
+  - File sending from the clipboard does not work in Firefox
 
 
 ## Disclaimer

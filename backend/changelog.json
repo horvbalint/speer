@@ -1,4 +1,15 @@
 {
+  "1.5.9": {
+    "title": "Send files from the clipboard",
+    "changes": [
+      "One can now send files by pasting them from the clipboard into a conversation",
+      "Fixed UI bugs regarding box-shadow and border-radius"
+    ],
+    "notes": [
+      "One needs to confirm the action when pasting from the clipboard"
+    ],
+    "type": "feature"
+  },
   "1.4.9": {
     "title": "Security and UI",
     "changes": [
