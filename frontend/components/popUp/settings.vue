@@ -58,7 +58,7 @@ export default {
       let formData = new FormData()
       formData.append('avatar', this.$refs.file.files[0])
 
-      this.$axios.$post(`/avatar/${this.$store.state.user._id}`, formData, {
+      this.$axios.$post('/avatar', formData, {
         Headers: {'Content-Type': 'multipart/form-data'},
         onUploadProgress: progressEvent => {
           if(!this.$refs.border) return

@@ -9,7 +9,7 @@ export const state = () => ({
   file: false,
   notification: false,
   image: false,
-  filesFromShare: false,
+  filesToConfirm: false,
   changelog: false
 })
 
@@ -23,7 +23,7 @@ export const mutations = {
     state.file = false
     state.notification = false
     state.image = false
-    state.filesFromShare = false
+    state.filesToConfirm = false
   },
   open(state, popUp) {
     state[popUp] = true

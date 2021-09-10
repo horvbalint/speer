@@ -1,5 +1,5 @@
 <template>
-  <div class="sideBar">
+  <div class="sideBar closed">
     <div class="top">
       <h1>Speer</h1>
     </div>
@@ -125,7 +125,19 @@ h1 {
   background: var(--accent-color);
 }
 
+@media screen and (max-width: 800px) {
+  .sideBar{
+    transition: box-shadow var(--speed-normal), border-radius var(--speed-normal);
+  }
+  .closed {
+    box-shadow: none;
+  }
+}
+
 @media screen and (max-width: 600px) {
+  .open {
+    border-radius: 0;
+  }
   .no-friends i {
     font-size: 75px;
     margin-bottom: 20px;

@@ -1,18 +1,16 @@
 <template>
   <PopUp
-    title="Action needs confirmation"
+    title="Confirm action"
     icon="fas fa-file"
     :buttons="buttons"
   >
     <div class="img" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.getters.partnerFriend.avatar}')`}"/>
-    <p class="description">Do you want to send to '{{$store.getters.partnerFriend.username}}' these files:</p>
+    <p class="description">Do you want to send these files to '{{$store.getters.partnerFriend.username}}'?</p>
 
-    <div class="file" v-for="(file, index) in $store.state.filesFromShare" :key="`${file}-${index}`">
+    <div class="file" v-for="(file, index) in $store.state.filesToConfirm" :key="`${file}-${index}`">
       <p>Filename: <span>{{file.name}}</span></p>
       <p>Size: <span>{{getFileSize(file.size)}}</span></p>
     </div>
-
-    <p class="description">?</p>
   </PopUp>
 </template>
 
@@ -27,14 +25,17 @@ export default {
       buttons: [
         {
           text: 'Cancel',
-          action: () => this.$store.dispatch('popUp/close', 'filesFromShare')
+          action: () => {
+            this.$store.dispatch('setFilesToConfirm', [])
+            this.$store.dispatch('popUp/close', 'filesToConfirm')
+          }
         },
         {
           text: 'Send',
           action: () => {
-            this.$store.dispatch('sendFiles', {files: this.$store.state.filesFromShare})
-            this.$store.dispatch('setFilesFromShare', [])
-            this.$store.dispatch('popUp/close', 'filesFromShare')
+            this.$store.dispatch('sendFiles', {files: this.$store.state.filesToConfirm})
+            this.$store.dispatch('setFilesToConfirm', [])
+            this.$store.dispatch('popUp/close', 'filesToConfirm')
           }
         }
       ]

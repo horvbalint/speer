@@ -11,6 +11,11 @@ export default {
   components: {
     Alert,
   },
+  mounted() {
+    window.addEventListener('beforeinstallprompt', event => {
+      this.$store.dispatch('setBeforeInstallPrompt', event)
+    })
+  }
 }
 </script>
 

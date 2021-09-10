@@ -1,7 +1,7 @@
 <template>
   <div class="blank-index"  v-if="!$store.getters.partner">
     <div
-      v-if="beforeInstallPromptEvent"
+      v-if="$store.state.beforeInstallPrompt"
       class="install-btn"
       @click="install()"
     >
@@ -107,7 +107,6 @@ export default {
       fileDragOver: false,
       notificationSound: null,
       version: PackageJSON.version,
-      beforeInstallPromptEvent: null,
     }
   },
   computed: {
@@ -128,8 +127,6 @@ export default {
       else if(document.visibilityState === 'hidden')
         this.$store.dispatch('setVisible', false)
     })
-
-    window.addEventListener('beforeinstallprompt', event => this.beforeInstallPromptEvent = event)
 
     if(Notification && Notification.permission == 'default')
       this.$store.dispatch('popUp/open', 'notification')
@@ -202,25 +199,43 @@ export default {
         })
     },
     async install() {
-      this.beforeInstallPromptEvent.prompt()
+      this.$store.state.beforeInstallPrompt.prompt()
 
-      this.beforeInstallPromptEvent.userChoice
+      this.$store.state.beforeInstallPrompt.userChoice
         .then( ({outcome}) => {
           if(outcome == 'accepted')
-            this.beforeInstallPromptEvent = null
+            this.$store.dispatch('setBeforeInstallPrompt', null)
         })
         .catch( err => {
           errorBox('Error!', 'Something went wrong, try installing Speer later')
           console.error(err)
         })
+    },
+    handlePaseEvent(event) {
+      let files = []
+      for(let item of event.clipboardData.items) {
+        let file = item.getAsFile()
+        if(file) files.push(file)
+      }
+
+      if(files.length) {
+        event.preventDefault()
+        this.$store.dispatch('setFilesToConfirm', files)
+        this.$store.dispatch('popUp/open', 'filesToConfirm')
+      }
     }
   },
   watch: {
-    '$store.getters.partnerFriend': function() {
-      if(!this.$store.getters.partnerFriend) return
+    '$store.getters.partner': function() {
+      if(!this.$store.getters.partner) {
+        document.removeEventListener('paste', this.handlePaseEvent)
+        return
+      }
 
-      if(this.$store.state.filesFromShare.length)
-        this.$store.dispatch('popUp/open', 'filesFromShare')
+      if(this.$store.state.filesToConfirm.length)
+        this.$store.dispatch('popUp/open', 'filesToConfirm')
+
+      document.addEventListener('paste', this.handlePaseEvent)
     }
   },
   components: {

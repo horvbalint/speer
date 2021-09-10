@@ -190,10 +190,7 @@ router.use( (req, res, next) => {
   else next()
 })
 
-router.post('/avatar/:id', upload.single('avatar'), (req, res) => {
-  if(String(req.user._id) != req.params.id)
-    return res.status(403).send('Other user')
-
+router.post('/avatar', upload.single('avatar'), (req, res) => {
   let extension = req.file.mimetype.split('/').pop()
   let filename  = `${req.file.filename}.${extension}`
 
@@ -208,12 +205,16 @@ router.post('/avatar/:id', upload.single('avatar'), (req, res) => {
       .finally( () => {
         if(err) return res.status(500).send('Failed to resize')
     
-        User.updateOne({_id: req.params.id}, {avatar: filename})
-        .then( () => res.send(filename) )
-        .catch( err => {
-          console.error(err)
-          res.status(500).send(err)
-        })
+        User.updateOne({_id: req.user._id}, {avatar: filename})
+          .then( () => res.send(filename) )
+          .catch( err => {
+            console.error(err)
+            res.status(500).send(err)
+          })
+
+        if(req.user.avatar != 'avatar.jpg')
+          fs.promises.unlink(path.resolve(__dirname, './files/', req.user.avatar))
+            .catch( err => console.error(err) )
       })
   })
 })

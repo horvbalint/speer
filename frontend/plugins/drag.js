@@ -108,7 +108,10 @@ window.Drag = class Drag {
     if(!this.isMobile)
       this.surface.removeEventListener('mousemove', this.eventPreProcessors[this.direction].mousemoveHandler)
 
-    if(!this.moving) return
+    if(!this.moving) {
+      if(this.onDone) this.onDone(this.state)
+      return
+    }
 
     if(this.frame) cancelAnimationFrame(this.frame)
     this.frame = null

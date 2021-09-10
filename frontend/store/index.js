@@ -20,11 +20,12 @@ export const state = () => ({
   friends: {}, // user data of our friends
   requests: [], // friend requests
 
-  filesFromShare: [], // files waiting to be sent after using the Web Share Target API
+  filesToConfirm: [], // files waiting to be sent after using the Web Share Target API
   
   sideBarDrag: null,  // Drag instance (plugins/drag.js)
   popUpDrag: null, // Drag instance (plugins/drag.js)
   screenWidth: 1000, // width of the screen
+  beforeInstallPrompt: null, // deffered PWA install event
   pageVisible: true, // is the page visible
   backendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001',
   frontendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun',
@@ -174,8 +175,9 @@ export const mutations = {
     state.sideBarDrag = null
     state.popUpDrag = null
     state.screenWidth = 1000
+    state.beforeInstallPrompt = null
     state.pageVisible = true
-    state.filesFromShare = []
+    state.filesToConfirm = []
     state.backendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001'
     state.frontendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun'
     // state.backendURL = 'http://localhost:9001'
@@ -263,8 +265,8 @@ export const mutations = {
   setAcceptAllInSession(state, {partnerId, value}) {
     state.partners[partnerId].file.acceptAllInSession = value
   },
-  setFilesFromShare(state, files) {
-    state.filesFromShare = files
+  setFilesToConfirm(state, files) {
+    state.filesToConfirm = files
   },
   setIsConnected(state, value) {
     state.isConnected = value
@@ -331,6 +333,9 @@ export const mutations = {
   setConnecting(state, {type, value}) {
     state.connecting[type] = value
   },
+  setBeforeInstallPrompt(state, event) {
+    state.beforeInstallPrompt = event
+  }
 }
 
 export const actions = {
@@ -636,8 +641,8 @@ export const actions = {
   setAcceptAllInSession(ctx, value) {
     ctx.commit('setAcceptAllInSession', value)
   },
-  setFilesFromShare(ctx, files) {
-    ctx.commit('setFilesFromShare', files)
+  setFilesToConfirm(ctx, files) {
+    ctx.commit('setFilesToConfirm', files)
   },
   setIsConnected(ctx, value) {
     ctx.commit('setIsConnected', value)
@@ -671,6 +676,9 @@ export const actions = {
     axios.post(`${NuxtConfig.axios.baseURL}/logout`, null, {withCredentials: true})
     this.$router.push('/login')
   },
+  setBeforeInstallPrompt(ctx, event) {
+    ctx.commit('setBeforeInstallPrompt', event)
+  }
 }
 
 function setTextConnectionListeners(ctx, remoteId, connection) {

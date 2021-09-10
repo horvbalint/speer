@@ -23,7 +23,7 @@
       <RequestPopUp v-if="$store.state.requests.length"/>
       <AddFriendsPopUp v-if="$store.state.popUp.addFriends"/>
       <NotificationPopUp v-if="$store.state.popUp.notification"/>
-      <FilesFromSharePopUp v-if="$store.state.popUp.filesFromShare"/>
+      <FilesToConfirmPopUp v-if="$store.state.popUp.filesToConfirm"/>
       <ChangelogPopUp v-if="$store.state.popUp.changelog"/>
       <BreakingChangePopUp v-if="showBreakingPopUp"/>
       <ImageViewer v-if="$store.state.popUp.image"/>
@@ -43,7 +43,7 @@ import CallPopUp from '~/components/popUp/call'
 import FilePopUp from '~/components/popUp/file'
 import NotificationPopUp from '~/components/popUp/notification'
 import ImageViewer from '~/components/popUp/imageViewer'
-import FilesFromSharePopUp from '~/components/popUp/filesFromShare'
+import FilesToConfirmPopUp from '~/components/popUp/filesToConfirm'
 import ChangelogPopUp from '~/components/popUp/changelog'
 import BreakingChangePopUp from '~/components/popUp/breakingChange'
 import PackageJSON from '~/../package.json'
@@ -70,6 +70,9 @@ export default {
   },
   mounted() {
     this.$store.dispatch('setScreenWidth', window.innerWidth)
+    window.addEventListener('beforeinstallprompt', event => {
+      this.$store.dispatch('setBeforeInstallPrompt', event)
+    })
 
     window.addEventListener('resize', () => {
       if(this.$store.state.screenWidth <= 800) {
@@ -93,7 +96,14 @@ export default {
       range: {from: -100, to: 0},
       multiplier: 1/(this.$store.state.screenWidth/100),
       startOnCreated: this.$store.state.screenWidth <= 800,
-      onStart: () => this.$refs.sideBar.$el.style.willChange = 'transform',
+      onStart: state => {
+        this.$refs.sideBar.$el.style.willChange = 'transform'
+
+        if(state == 0)
+          this.$refs.sideBar.$el.classList.remove('open')
+        else
+          this.$refs.sideBar.$el.classList.remove('closed')
+      },
       setter: percent => this.$refs.sideBar.$el.style.transform = `translateX(${percent}%)`,
       onEnd: percent => {
         if(percent < boundary) {
@@ -105,16 +115,23 @@ export default {
           return 0
         }
       },
-      onDone: () => this.$refs.sideBar.$el.style.willChange = 'auto',
+      onDone: state => {
+        this.$refs.sideBar.$el.style.willChange = 'auto'
+
+        if(state == 0)
+          this.$refs.sideBar.$el.classList.add('open')
+        else
+          this.$refs.sideBar.$el.classList.add('closed')
+      },
     }))
 
     navigator.serviceWorker.addEventListener('message', event => {
       if(event.data.action !== 'send-files') return
 
-      this.$store.dispatch('setFilesFromShare', event.data.files)
+      this.$store.dispatch('setFilesToConfirm', event.data.files)
 
       if(this.$store.getters.partner)
-        this.$store.dispatch('popUp/open', 'filesFromShare')
+        this.$store.dispatch('popUp/open', 'filesToConfirm')
     })
 
     navigator.serviceWorker.getRegistration()
@@ -149,10 +166,15 @@ export default {
       this.$store.state.sideBarDrag.state = -100
       this.$refs.sideBar.$el.style.transform = `translateX(${this.$store.state.sideBarDrag.state}%)`
 
-      this.$refs.sideBar.$el.addEventListener('transitionend', () => {  
-        this.$refs.sideBar.$el.style.willChange = 'auto'
-        this.$refs.sideBar.$el.style.transition = 'none'
-      }, false)
+      this.$refs.sideBar.$el.addEventListener('transitionend', this.handleTransitionEnd, false)
+    },
+    handleTransitionEnd() {
+      this.$refs.sideBar.$el.removeEventListener('transitionend', this.handleTransitionEnd, false)
+
+      this.$refs.sideBar.$el.classList.remove('open')
+      this.$refs.sideBar.$el.classList.add('closed')
+      this.$refs.sideBar.$el.style.willChange = 'auto'
+      this.$refs.sideBar.$el.style.transition = 'none'
     },
     disconnectFromSw() {
       if(!this.swRegistration) return
@@ -177,7 +199,7 @@ export default {
     FilePopUp,
     ImageViewer,
     NotificationPopUp,
-    FilesFromSharePopUp,
+    FilesToConfirmPopUp,
     ChangelogPopUp,
     BreakingChangePopUp
   }
