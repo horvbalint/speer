@@ -1,4 +1,13 @@
 {
+  "1.6.9": {
+    "title": "Missed call message and bug fixes",
+    "changes": [
+      "When one misses a call, a message is shown in the conversation with the time for how much it rang",
+      "Fixed numerous small bugs"
+    ],
+    "notes": [],
+    "type": "feature"
+  },
   "1.5.9": {
     "title": "Send files from the clipboard",
     "changes": [
