@@ -64,7 +64,7 @@
         v-for="(message, index) in $store.getters.partner.text.messages"
         :key="`m-${index}`"
         class="message"
-        :class="{'own': message.sender == $store.state.user._id, 'file': message.file}"
+        :class="{'own': message.sender == $store.state.user._id, 'file': message.file, 'missed': message.missed}"
         :style="{'background-image': `linear-gradient(to right, var(--green) ${message.percent}%, var(--accent-color) ${message.percent}%)`}"
         :title="formatTimeStamp(message.timeStamp)"
       >
@@ -100,7 +100,6 @@ import Settings from '~/components/popUp/settings'
 import PackageJSON from '~/../package.json'
 
 export default {
-  middleware: ['auth'],
   data() {
     return {
       message: '',
@@ -410,7 +409,7 @@ export default {
   margin: 1px 0;
 }
 .message:not(.file) {
-  background: var(--accent-color) !important;
+  background: var(--accent-color);
 }
 .message i {
   display: inline-block;
@@ -432,6 +431,9 @@ export default {
 }
 .own p {
   padding: 5px 20px 5px 15px;
+}
+.missed {
+  background: var(--red) !important;
 }
 .bottom {
   flex-shrink: 0;

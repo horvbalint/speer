@@ -44,7 +44,10 @@ export default {
     return {
       buttons: [{
         text: 'Log out',
-        action: () => this.$store.dispatch('logout')
+        action: () => {
+          this.$store.state.popUpDrag.stop()
+          this.$store.dispatch('logout')
+        }
       }],
       deviceSubscription: null,
       newDeviceName: '',

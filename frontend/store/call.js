@@ -71,7 +71,7 @@ export const actions = {
     }
     connection.onRequest = request => {
       request.caller = ctx.rootState.friends[remoteId]
-      ctx.commit('popUp/set', {popUp: 'call', value: request}, {root: true})
+      ctx.commit('popUp/set', {popUp: 'call', value: Object.assign(request, {at: Date.now()})}, {root: true})
     }
     connection.onDecline = () =>  {
       ctx.dispatch('resetCall', {remoteId}, {root: true})
@@ -80,8 +80,17 @@ export const actions = {
     }
     connection.onTrack = (track, stream) => ctx.commit('setRemoteStream', {remoteId, stream}, {root: true})
     connection.onEnd = () => {
-      if(ctx.rootState.popUp.call)
+      if(ctx.rootState.popUp.call) {
+        ctx.commit('addMessage', {
+          remoteId: remoteId,
+          senderId: remoteId,
+          message: `Missed call. Rang for: ${formatTime(Date.now()-ctx.rootState.popUp.call.at)}`,
+          call: true,
+          missed: true
+        }, {root: true})
+        
         ctx.commit('popUp/set', {popUp: 'call', value: null}, {root: true})
+      }
 
       if(ctx.rootGetters.call.startTime)
         ctx.commit('addMessage', {

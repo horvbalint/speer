@@ -60,7 +60,7 @@ div ul {
 }
 div li {
   margin: 3px 0;
-  word-break: break-all;
+  word-break: break-word;
   user-select: text;
 }
 </style>

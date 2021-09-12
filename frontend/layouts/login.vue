@@ -12,9 +12,15 @@ export default {
     Alert,
   },
   mounted() {
-    window.addEventListener('beforeinstallprompt', event => {
+    window.addEventListener('beforeinstallprompt', this.saveBeforeInstallPrompt)
+  },
+  methods: {
+    saveBeforeInstallPrompt(event) {
       this.$store.dispatch('setBeforeInstallPrompt', event)
-    })
+    }
+  },
+  beforeDestroy() {
+    window.removeEventListener('beforeinstallprompt', this.saveBeforeInstallPrompt)
   }
 }
 </script>

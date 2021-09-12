@@ -69,7 +69,7 @@ export default {
       'share-target.js',
     ],
     preCaching: ['/svg/chat.svg', '/font/Roboto-Regular.ttf'],
-    cleanupOutdatedCaches: true
+    cleanupOutdatedCaches: true,
   },
   manifest: {
     name: 'Speer',

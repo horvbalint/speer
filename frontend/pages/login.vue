@@ -27,7 +27,7 @@
       </div>
     </div>
 
-    <a class="learn-more" href="https://github.com/horvbalint/speer" target="_blank">Click here to learn more about Speer</a>
+    <a class="learn-more" href="https://github.com/horvbalint/speer" target="_blank">click here to learn more about Speer</a>
   </div>
 </template>
 

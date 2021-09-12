@@ -49,6 +49,7 @@ import BreakingChangePopUp from '~/components/popUp/breakingChange'
 import PackageJSON from '~/../package.json'
 
 export default {
+  middleware: ['auth'],
   data() {
     return {
       showVersionNotification: false,
@@ -70,26 +71,8 @@ export default {
   },
   mounted() {
     this.$store.dispatch('setScreenWidth', window.innerWidth)
-    window.addEventListener('beforeinstallprompt', event => {
-      this.$store.dispatch('setBeforeInstallPrompt', event)
-    })
-
-    window.addEventListener('resize', () => {
-      if(this.$store.state.screenWidth <= 800) {
-        if(window.innerWidth > 800) {
-          this.$store.state.sideBarDrag.stop()
-          this.$refs.sideBar.$el.style.transform = 'translateX(0)'
-        }
-      }
-      else {
-        if(window.innerWidth <= 800) {
-          this.$refs.sideBar.$el.style.transform = `translateX(${this.$store.state.sideBarDrag.state}%)`
-          this.$store.state.sideBarDrag.start()
-        }
-      }
-
-      this.$store.dispatch('setScreenWidth', window.innerWidth)
-    })
+    window.addEventListener('beforeinstallprompt', this.saveBeforeInstallPrompt)
+    window.addEventListener('resize', this.handleResize)
 
     let boundary = -85
     this.$store.dispatch('setSideBarDrag', new Drag({
@@ -125,15 +108,7 @@ export default {
       },
     }))
 
-    navigator.serviceWorker.addEventListener('message', event => {
-      if(event.data.action !== 'send-files') return
-
-      this.$store.dispatch('setFilesToConfirm', event.data.files)
-
-      if(this.$store.getters.partner)
-        this.$store.dispatch('popUp/open', 'filesToConfirm')
-    })
-
+    navigator.serviceWorker.addEventListener('message', this.handleSWMessage)
     navigator.serviceWorker.getRegistration()
       .then( registration => {
         if(registration) {
@@ -157,6 +132,22 @@ export default {
       localStorage['showChangelog'] = this.version
       location.reload()
     },
+    handleResize() {
+      if(this.$store.state.screenWidth <= 800) {
+        if(window.innerWidth > 800) {
+          this.$store.state.sideBarDrag.stop()
+          this.$refs.sideBar.$el.style.transform = 'translateX(0)'
+        }
+      }
+      else {
+        if(window.innerWidth <= 800) {
+          this.$refs.sideBar.$el.style.transform = `translateX(${this.$store.state.sideBarDrag.state}%)`
+          this.$store.state.sideBarDrag.start()
+        }
+      }
+
+      this.$store.dispatch('setScreenWidth', window.innerWidth)
+    },
     closeSideBar() {
       if(this.$store.state.screenWidth > 800) return
 
@@ -176,15 +167,29 @@ export default {
       this.$refs.sideBar.$el.style.willChange = 'auto'
       this.$refs.sideBar.$el.style.transition = 'none'
     },
+    handleSWMessage(event) {
+      if(event.data.action !== 'send-files') return
+
+      this.$store.dispatch('setFilesToConfirm', event.data.files)
+
+      if(this.$store.getters.partner)
+        this.$store.dispatch('popUp/open', 'filesToConfirm')
+    },
     disconnectFromSw() {
       if(!this.swRegistration) return
 
       this.swRegistration.active.postMessage({action: 'disconnect'})
+    },
+    saveBeforeInstallPrompt(event) {
+      this.$store.dispatch('setBeforeInstallPrompt', event)
     }
   },
   beforeDestroy() {
     this.disconnectFromSw()
     window.removeEventListener('beforeunload', this.disconnectFromSw)
+    window.removeEventListener('beforeinstallprompt', this.saveBeforeInstallPrompt)
+    window.removeEventListener('resize', this.handleResize)
+    navigator.serviceWorker.removeEventListener('message', this.handleSWMessage)
 
     if(this.$store.state.sideBarDrag)
       this.$store.state.sideBarDrag.stop()
