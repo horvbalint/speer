@@ -45,7 +45,9 @@ export default {
       buttons: [{
         text: 'Log out',
         action: () => {
-          this.$store.state.popUpDrag.stop()
+          if(this.$store.state.popUpDrag)
+            this.$store.state.popUpDrag.stop()
+            
           this.$store.dispatch('logout')
         }
       }],
