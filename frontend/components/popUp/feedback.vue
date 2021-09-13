@@ -47,6 +47,7 @@
 
 <script>
 import PopUp from '~/components/popUp/popUp'
+import PackageJSON from '~/../package.json'
 
 export default {
   data() {
@@ -89,7 +90,8 @@ export default {
       this.$axios.post('/feedback', {
         type: this.type,
         description: this.description,
-        stepsToReproduce: this.stepsToReproduce
+        stepsToReproduce: this.stepsToReproduce,
+        version: PackageJSON.version
       })
         .then(() => {
           successBox('Feedback sent!', 'Thank you for your feedback!')
