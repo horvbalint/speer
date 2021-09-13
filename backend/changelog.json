@@ -1,4 +1,13 @@
 {
+  "1.7.9": {
+    "title": "Your feedback counts!",
+    "changes": [
+      "You can easily give your feedback (suggestion, bug or other) on Speer by clicking the text next to the version number",
+      "Fixed a few bugs"
+    ],
+    "notes": [],
+    "type": "feature"
+  },
   "1.6.9": {
     "title": "Missed call message and bug fixes",
     "changes": [
