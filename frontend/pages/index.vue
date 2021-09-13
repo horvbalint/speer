@@ -27,7 +27,11 @@
       <p v-else class="file-from-share">Choose a friend who you want to share the files with</p>
     </div>
 
-    <p class="version" @click="showChangeLog()">version {{version}}</p>
+    <p class="bottom-line">
+      <span class="version" @click="showChangeLog()">v{{version}}</span>
+      -
+      <span class="feedback" @click="$store.dispatch('popUp/open', 'feedback')">give feedback</span>
+    </p>
 
     <transition name="pop">
       <Settings v-if="$store.state.popUp.settings"/>
@@ -331,19 +335,22 @@ export default {
   color: var(--accent-color);
   margin-top: 60px;
   font-size: 24px;
+  text-align: center;
 }
 .blank-index .content .mobile {
   display: none;
 }
-.blank-index .version {
+.blank-index .bottom-line {
   position: absolute;
   bottom: 5px;
   left: 50%;
   transform: translateX(-50%);
   font-size: 14px;
   color: var(--accent-color);
-  text-decoration: underline;
   cursor: pointer;
+}
+.blank-index .bottom-line span {
+  text-decoration: underline;
 }
 .index {
   display: flex;

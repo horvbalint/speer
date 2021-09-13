@@ -66,7 +66,7 @@ input {
   user-select:auto;
 }
 
-h1, h2, h3, h4, h5, h6, p, div, pre {
+h1, h2, h3, h4, h5, h6, p, div, pre, input, textarea, button {
   font-family: Roboto;
   font-display: swap;
 }

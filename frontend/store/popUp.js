@@ -10,7 +10,8 @@ export const state = () => ({
   notification: false,
   image: false,
   filesToConfirm: false,
-  changelog: false
+  changelog: false,
+  feedback: false,
 })
 
 export const mutations = {

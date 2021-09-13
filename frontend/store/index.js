@@ -488,6 +488,8 @@ export const actions = {
     ctx.dispatch('call/muteAudio', remoteId)
 
     ctx.commit('resetCall', {remoteId, full})
+
+    ctx.dispatch('stopSound', 'callWaiting')
   },
   sendMessage(ctx, {remoteId = ctx.state.partnerId, message}) {
     ctx.commit('addMessage', {remoteId, senderId: ctx.state.user._id, message})

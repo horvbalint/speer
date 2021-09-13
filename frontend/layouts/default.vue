@@ -18,15 +18,16 @@
 
     <transition name="pop">
       <CallPopUp v-if="$store.state.popUp.call"></CallPopUp>
-      <FilePopUp v-if="$store.state.popUp.file"></FilePopUp>
-      <PingPopUp v-if="$store.state.popUp.ping"></PingPopUp>
-      <RequestPopUp v-if="$store.state.requests.length"/>
-      <AddFriendsPopUp v-if="$store.state.popUp.addFriends"/>
-      <NotificationPopUp v-if="$store.state.popUp.notification"/>
-      <FilesToConfirmPopUp v-if="$store.state.popUp.filesToConfirm"/>
-      <ChangelogPopUp v-if="$store.state.popUp.changelog"/>
-      <BreakingChangePopUp v-if="showBreakingPopUp"/>
-      <ImageViewer v-if="$store.state.popUp.image"/>
+      <FilePopUp v-else-if="$store.state.popUp.file"></FilePopUp>
+      <PingPopUp v-else-if="$store.state.popUp.ping"></PingPopUp>
+      <RequestPopUp v-else-if="$store.state.requests.length"/>
+      <AddFriendsPopUp v-else-if="$store.state.popUp.addFriends"/>
+      <NotificationPopUp v-else-if="$store.state.popUp.notification"/>
+      <FilesToConfirmPopUp v-else-if="$store.state.popUp.filesToConfirm"/>
+      <ChangelogPopUp v-else-if="$store.state.popUp.changelog"/>
+      <FeedbackPopUp v-else-if="$store.state.popUp.feedback"/>
+      <BreakingChangePopUp v-else-if="showBreakingPopUp"/>
+      <ImageViewer v-else-if="$store.state.popUp.image"/>
     </transition>
 
     <Alert/>
@@ -45,6 +46,7 @@ import NotificationPopUp from '~/components/popUp/notification'
 import ImageViewer from '~/components/popUp/imageViewer'
 import FilesToConfirmPopUp from '~/components/popUp/filesToConfirm'
 import ChangelogPopUp from '~/components/popUp/changelog'
+import FeedbackPopUp from '~/components/popUp/feedback'
 import BreakingChangePopUp from '~/components/popUp/breakingChange'
 import PackageJSON from '~/../package.json'
 
@@ -206,7 +208,8 @@ export default {
     NotificationPopUp,
     FilesToConfirmPopUp,
     ChangelogPopUp,
-    BreakingChangePopUp
+    FeedbackPopUp,
+    BreakingChangePopUp,
   }
 }
 </script>

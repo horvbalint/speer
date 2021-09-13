@@ -73,9 +73,6 @@ export default {
         }
       }
     })
-
-    this.$store.state.sounds.callWaiting.currentTime = 0
-    this.$store.state.sounds.callWaiting.play().catch(err => {})
   },
   mounted() {
     if(this.$store.getters.call.stream)
@@ -118,7 +115,6 @@ export default {
     '$store.getters.call.remoteStream': function() {
       if(!this.$store.getters.call.remoteStream) return
 
-      this.$store.dispatch('stopSound', 'callWaiting')
       this.timeOut = setInterval(this.calculateCallDuration, 1000)
 
       this.$refs.video.srcObject = this.$store.getters.call.remoteStream
@@ -144,7 +140,6 @@ export default {
   },
   beforeDestroy() {
     if(this.timeOut) clearInterval(this.timeOut)
-    this.$store.dispatch('stopSound', 'callWaiting')
   },
   components: {
     CallSettings

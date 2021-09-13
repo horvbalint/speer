@@ -24,10 +24,14 @@ export const actions = {
       ctx.commit('setLocalStream', {remoteId, stream}, {root: true})
       ctx.commit('setInCall', {remoteId, inCall: true}, {root: true})
 
+      ctx.rootState.sounds.callWaiting.currentTime = 0
+      ctx.rootState.sounds.callWaiting.play().catch(err => {})
+    
       return ctx.rootGetters.call.connection.call(stream, {video})
     })
     .then( () => {
       if(video) ctx.dispatch('enableVideo')
+      ctx.dispatch('stopSound', 'callWaiting', {root: true})
     })
     .catch( err => {
       console.error(err)

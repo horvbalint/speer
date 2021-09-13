@@ -2,6 +2,7 @@ const SignalServer    = require('./globals/signalServer')
 const changelog       = require('./changelog')
 const mongoose        = require('mongoose')
 const passport        = require('passport')
+const Feedback        = require('./models/feedback')
 const Confirm         = require('./models/confirm')
 const express         = require('express')
 const webpush         = require('web-push')
@@ -480,6 +481,17 @@ router.get('/breaking/:version', (req, res) => {
   }
 
   res.send(false)
+})
+
+router.post('/feedback', (req, res) => {
+  req.body.stepsToReproduce = req.body.stepsToReproduce.slice(0, 9)
+
+  Feedback.create(req.body)
+    .then( () => res.send() )
+    .catch( err => {
+      console.error(err)
+      res.status(500).send(err)
+    })
 })
 
 router.post('/log', (req, res) => {
