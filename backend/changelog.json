@@ -1,4 +1,13 @@
 {
+  "1.7.10": {
+    "title": "The devil is in the details",
+    "changes": [
+      "One can only close a pop-up on mobile with a swipe, when the swipe starts on the header bar",
+      "The message received sound is played every time when one receives a message while being in a full-screen call"
+    ],
+    "notes": [],
+    "type": "feature"
+  },
   "1.7.9": {
     "title": "Your feedback counts!",
     "changes": [
