@@ -2,6 +2,7 @@ export const strict = false
 
 export const state = () => ({
   partner: null,
+  fullScreen: false,
 })
 
 export const mutations = {
@@ -11,6 +12,9 @@ export const mutations = {
   setCallPartner(state, partner) {
     state.partner = partner
   },
+  setFullScreen(state, value) {
+    state.fullScreen = value
+  }
 }
 
 export const actions = {
@@ -286,6 +290,9 @@ export const actions = {
     if(ctx.rootGetters.call.tracks.video.screen)
       ctx.rootGetters.call.tracks.video.screen.applyConstraints(constraints.video)
   },
+  setFullScreen(ctx, value) {
+    ctx.commit('setFullScreen', value)
+  }
 }
 
 function formatTime(time) {

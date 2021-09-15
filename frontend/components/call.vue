@@ -38,7 +38,7 @@
       </div>
 
       <div>
-        <i v-if="!fullScreen" class="fas fa-expand" @click="requestFullScreen()"></i>
+        <i v-if="!$store.state.call.fullScreen" class="fas fa-expand" @click="requestFullScreen()"></i>
         <i v-else class="fas fa-compress" @click="leaveFullScreen()"></i>
       </div>
     </div>
@@ -53,7 +53,6 @@ export default {
     return {
       timeOut: null,
       currentDuration: '00:00',
-      fullScreen: false,
       canScreenShare: false,
       sources: {
         audio: [],
@@ -83,10 +82,11 @@ export default {
       let promise = this.$refs.call.requestFullscreen ?  this.$refs.call.requestFullscreen() : this.$refs.call.webkitRequestFullscreen()
 
       promise.then( () => {
-        this.fullScreen = true
+        this.$store.dispatch('call/setFullScreen', true)
+
         document.addEventListener('fullscreenchange', () => {
           if(!document.fullscreenElement)
-            this.fullScreen = false
+            this.$store.dispatch('call/setFullScreen', false)
         })
       })
     },
@@ -94,7 +94,7 @@ export default {
       if (document.exitFullscreen) document.exitFullscreen()
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen()
 
-      this.fullScreen = false
+      this.$store.dispatch('call/setFullScreen', false)
     },
     calculateCallDuration() {
       let duration = Math.floor((Date.now()-this.$store.getters.call.startTime)/1000)

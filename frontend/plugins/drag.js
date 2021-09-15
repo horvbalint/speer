@@ -75,7 +75,7 @@ window.Drag = class Drag {
 
     this.stopped = true
   }
-  //
+
   startHandler(target, position) {
     if(this.moving || (this.target && !this.target.contains(target))) return
 

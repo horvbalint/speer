@@ -150,7 +150,7 @@ export const mutations = {
       state.sounds.message.currentTime = 0
       state.sounds.message.play().catch(err => {})
     }
-    else if(!state.pageVisible) {
+    else if(!state.pageVisible || state.call.fullScreen) {
       state.sounds.message.currentTime = 0
       state.sounds.message.play().catch(err => {})
     }

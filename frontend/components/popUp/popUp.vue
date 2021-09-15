@@ -3,7 +3,7 @@
     <div class="topper" @click="close()" ref="topper"></div>
 
     <div class="pop-up" ref="popUp" :class="{withButtons: buttons && buttons.length}">
-      <div class="title" v-if="title">
+      <div ref="header" class="title" v-if="title">
         <h3>{{title}}</h3>
         <hr>
         <i v-if="icon" :class="`fas ${icon}`"/>
@@ -50,6 +50,7 @@ export default {
 
     if(this.$store.state.screenWidth <= 600) {
       this.$store.dispatch('setPopUpDrag', new Drag({
+        target: this.$refs.header,
         direction: 'y',
         range: {from: 0, to: 100},
         multiplier: 1/(this.$refs.popUp.clientHeight/100),
