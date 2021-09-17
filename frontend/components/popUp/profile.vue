@@ -1,9 +1,9 @@
 <template>
   <PopUp
-    title="Settings"
+    title="Profile"
     icon="fa-user-cog"
     :buttons="buttons"
-    @close="$store.dispatch('popUp/close', 'settings')"
+    @close="$store.dispatch('popUp/close', 'profile')"
   >
     <div class="avatar">
       <div class="img" @click="$refs.file.click()" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.user.avatar}')`}">
@@ -12,6 +12,7 @@
       <label for="file">Click to change avatar (max 20MB)</label>
       <input id="file" type="file" hidden ref="file" @change="changeAvatar()">
     </div>
+    
     <div class="devices">
       <h3>Notification devices:</h3>
 
@@ -33,6 +34,11 @@
         <button @click="addDevice()">Save</button>
       </div>
     </div>
+
+    <div class="support2" @click="support()">
+      <span>Support Speer</span>
+      <i class="fas fa-donate"/>
+    </div>
   </PopUp>
 </template>
 
@@ -42,15 +48,17 @@ import PopUp from '~/components/popUp/popUp'
 export default {
   data() {
     return {
-      buttons: [{
-        text: 'Log out',
-        action: () => {
-          if(this.$store.state.popUpDrag)
-            this.$store.state.popUpDrag.stop()
-            
-          this.$store.dispatch('logout')
-        }
-      }],
+      buttons: [
+        {
+          text: 'Log out',
+          action: () => {
+            if(this.$store.state.popUpDrag)
+              this.$store.state.popUpDrag.stop()
+              
+            this.$store.dispatch('logout')
+          }
+        },
+      ],
       deviceSubscription: null,
       newDeviceName: '',
       adding: false,
@@ -143,6 +151,9 @@ export default {
           console.error(err)
           errorBox('Error!', 'Failed to test devices')
         })
+    },
+    support() {
+      window.open('https://www.buymeacoffee.com/speer', '_blank').focus()
     }
   },
   components: {
@@ -238,11 +249,49 @@ export default {
 .devices .add-device input::placeholder {
   color: var(--side-color);
 }
-.logout {
+.support {
+  margin: 10px 0;
+}
+.support h3 {
+  font-size: 18px;
+  text-align: center;
+  margin-bottom: 5px;
+}
+.support p {
+  text-align: center;
+  margin-bottom: 5px;
+}
+.support button {
+  display: block;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px solid black;
+  cursor: pointer;
+  margin: 0 auto 20px;
+  background: var(--accent-color);
+}
+.support2 {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   text-align: center;
   color: var(--accent-color);
+  font-weight: bold;
   cursor: pointer;
-  position: sticky;
-  bottom: 0;
+  width: 160px;
+  padding: 8px;
+  border-radius: 5px;
+  margin: 30px auto 20px;
+  border: 2px solid var(--accent-color);
+  transition: var(--speed-normal);
+}
+.support2:hover {
+  background: var(--accent-color);
+  color: var(--bg-color);
+}
+.support2 i {
+  display: inline-block;
+  font-size: 22px;
+  margin-left: 10px;
 }
 </style>

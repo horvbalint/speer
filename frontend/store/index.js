@@ -129,7 +129,7 @@ export const mutations = {
     state.partners[remoteId][type].connection.close()
     state.partners[remoteId][type].connection = null
   },
-  addMessage(state, {remoteId, senderId = remoteId, file = false, ...properties}) {
+  addMessage(state, {remoteId, senderId = remoteId, ...properties}) {
     if(!properties.message || !properties.message.trim()) {
       // There is (hopefully just was) a bug, when a call/file request came through as a message
       console.log("GOTCHA!")
@@ -137,11 +137,15 @@ export const mutations = {
     }
     
     let message = {
-      file,
       sender: senderId,
       timeStamp: Date.now(),
       ...properties
     }
+
+    try {
+      new URL(message.message)
+      message.url = true
+    } catch(err) {}
 
     state.partners[remoteId].text.messages.push(message)
 

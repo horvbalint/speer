@@ -11,7 +11,7 @@
     <div
     v-if="$store.state.user"
     class="profile"
-    @click="$store.dispatch('popUp/open', 'settings')"
+    @click="$store.dispatch('popUp/open', 'profile')"
     >
       <span>{{$store.state.user.username}}</span>
       <div class="avatar" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.user.avatar}')`}"/>
@@ -32,10 +32,6 @@
       -
       <span class="feedback" @click="$store.dispatch('popUp/open', 'feedback')">give feedback</span>
     </p>
-
-    <transition name="pop">
-      <Settings v-if="$store.state.popUp.settings"/>
-    </transition>
   </div>
   
   <div v-else class="index">
@@ -68,9 +64,15 @@
         v-for="(message, index) in $store.getters.partner.text.messages"
         :key="`m-${index}`"
         class="message"
-        :class="{'own': message.sender == $store.state.user._id, 'file': message.file, 'missed': message.missed}"
+        :class="{
+          'own': message.sender == $store.state.user._id,
+          'file': message.file,
+          'missed': message.missed,
+          'url': message.url,
+        }"
         :style="{'background-image': `linear-gradient(to right, var(--green) ${message.percent}%, var(--accent-color) ${message.percent}%)`}"
         :title="formatTimeStamp(message.timeStamp)"
+        @click="handleMessageClick(message)"
       >
         <p>
           {{message.message}}
@@ -100,7 +102,6 @@
 </template>
 
 <script>
-import Settings from '~/components/popUp/settings'
 import PackageJSON from '~/../package.json'
 
 export default {
@@ -214,7 +215,7 @@ export default {
           console.error(err)
         })
     },
-    handlePaseEvent(event) {
+    handlePasteEvent(event) {
       let files = []
       for(let item of event.clipboardData.items) {
         let file = item.getAsFile()
@@ -226,22 +227,24 @@ export default {
         this.$store.dispatch('setFilesToConfirm', files)
         this.$store.dispatch('popUp/open', 'filesToConfirm')
       }
+    },
+    handleMessageClick(message) {
+      if(!message.url) return
+
+      window.open(message.message, '_blank').focus()
     }
   },
   watch: {
     '$store.getters.partner': function() {
-      document.removeEventListener('paste', this.handlePaseEvent)
+      document.removeEventListener('paste', this.handlePasteEvent)
       if(!this.$store.getters.partner) return
 
       if(this.$store.state.filesToConfirm.length)
         this.$store.dispatch('popUp/open', 'filesToConfirm')
 
-      document.addEventListener('paste', this.handlePaseEvent)
+      document.addEventListener('paste', this.handlePasteEvent)
     }
   },
-  components: {
-    Settings
-  }
 }
 </script>
 
@@ -441,6 +444,10 @@ export default {
 }
 .missed {
   background: var(--red) !important;
+}
+.url {
+  text-decoration: underline;
+  cursor: pointer;
 }
 .bottom {
   flex-shrink: 0;

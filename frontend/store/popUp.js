@@ -2,7 +2,7 @@ export const strict = false
 
 export const state = () => ({
   addFriends: false,
-  settings: false,
+  profile: false,
   call: false,
   callSettings: false,
   ping: false,
@@ -17,7 +17,7 @@ export const state = () => ({
 export const mutations = {
   reset(state) {
     state.addFriends = false
-    state.settings = false
+    state.profile = false
     state.call = false
     state.callSettings = false
     state.ping = false
@@ -25,6 +25,8 @@ export const mutations = {
     state.notification = false
     state.image = false
     state.filesToConfirm = false
+    state.changelog = false
+    state.feedback = false
   },
   open(state, popUp) {
     state[popUp] = true

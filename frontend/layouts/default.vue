@@ -21,6 +21,7 @@
       <FilePopUp v-else-if="$store.state.popUp.file"></FilePopUp>
       <PingPopUp v-else-if="$store.state.popUp.ping"></PingPopUp>
       <RequestPopUp v-else-if="$store.state.requests.length"/>
+      <ProfilePopUp v-else-if="$store.state.popUp.profile"/>
       <AddFriendsPopUp v-else-if="$store.state.popUp.addFriends"/>
       <NotificationPopUp v-else-if="$store.state.popUp.notification"/>
       <FilesToConfirmPopUp v-else-if="$store.state.popUp.filesToConfirm"/>
@@ -38,6 +39,7 @@
 import SideBar from '~/components/sideBar'
 import Alert from '~/components/popUp/alert'
 import AddFriendsPopUp from '~/components/popUp/addFriends'
+import ProfilePopUp from '~/components/popUp/profile'
 import RequestPopUp from '~/components/popUp/requests'
 import PingPopUp from '~/components/popUp/ping'
 import CallPopUp from '~/components/popUp/call'
@@ -200,6 +202,7 @@ export default {
     SideBar,
     Alert,
     AddFriendsPopUp,
+    ProfilePopUp,
     RequestPopUp,
     PingPopUp,
     CallPopUp,

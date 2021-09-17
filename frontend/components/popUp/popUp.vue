@@ -13,16 +13,18 @@
         <slot/>
       </div>
 
-      <div v-if="buttons" class="buttons">
-        <div
-          v-for="button in buttons"
-          :key="button.text" 
-          class="button"
-          @click="button.action()"
-          v-html="button.text"
-        >
+      <slot name="buttons">
+        <div v-if="buttons" class="buttons">
+          <div
+            v-for="button in buttons"
+            :key="button.text" 
+            class="button"
+            @click="button.action()"
+            v-html="button.text"
+          >
+          </div>
         </div>
-      </div>
+      </slot>
     </div>
   </div>
 </template>
