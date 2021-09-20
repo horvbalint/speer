@@ -1,4 +1,15 @@
 {
+  "1.7.11": {
+    "title": "No more misclicks!",
+    "changes": [
+      "A confirmation pop-up is shown, when one wants to close Speer while a call or a file sending is in progress",
+      "URLs sent can be clicked to open them on a new page",
+      "Added a support button to the Profile menu",
+      "Multiple fixes"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
   "1.7.10": {
     "title": "The devil is in the details",
     "changes": [
