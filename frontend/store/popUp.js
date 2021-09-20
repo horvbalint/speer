@@ -8,7 +8,7 @@ export const state = () => ({
   ping: false,
   file: false,
   notification: false,
-  image: false,
+  images: [],
   filesToConfirm: false,
   changelog: false,
   feedback: false,
@@ -23,7 +23,7 @@ export const mutations = {
     state.ping = false
     state.file = false
     state.notification = false
-    state.image = false
+    state.images = []
     state.filesToConfirm = false
     state.changelog = false
     state.feedback = false

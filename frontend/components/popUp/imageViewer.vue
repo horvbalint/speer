@@ -1,6 +1,6 @@
 <template>
   <div class="popUp">
-    <div class="topper" @click="$store.dispatch('popUp/close', 'image')"></div>
+    <div class="topper" @click="close()"></div>
 
     <img ref="img"/>
   </div>
@@ -10,7 +10,16 @@
 export default {
   mounted() {
     this.$store.state.sideBarDrag.stop()
-    this.$refs.img.src = URL.createObjectURL(this.$store.state.popUp.image)
+    this.$refs.img.src = URL.createObjectURL(this.$store.state.popUp.images[0])
+  },
+  methods: {
+    close() {
+      let remainingImages = this.$store.state.popUp.images.slice(1)
+      this.$store.dispatch('popUp/set', {popUp: 'images', value: remainingImages})
+
+      if(remainingImages.length)
+        this.$refs.img.src = URL.createObjectURL(remainingImages[0])
+    }
   },
   beforeDestroy() {
     if(this.$store.state.screenWidth <= 800)

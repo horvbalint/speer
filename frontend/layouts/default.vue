@@ -18,6 +18,7 @@
 
     <transition name="pop">
       <CallPopUp v-if="$store.state.popUp.call"></CallPopUp>
+      <ImageViewer v-else-if="$store.state.popUp.images.length"/>
       <FilePopUp v-else-if="$store.state.popUp.file"></FilePopUp>
       <PingPopUp v-else-if="$store.state.popUp.ping"></PingPopUp>
       <RequestPopUp v-else-if="$store.state.requests.length"/>
@@ -28,7 +29,6 @@
       <ChangelogPopUp v-else-if="$store.state.popUp.changelog"/>
       <FeedbackPopUp v-else-if="$store.state.popUp.feedback"/>
       <BreakingChangePopUp v-else-if="showBreakingPopUp"/>
-      <ImageViewer v-else-if="$store.state.popUp.image"/>
     </transition>
 
     <Alert/>

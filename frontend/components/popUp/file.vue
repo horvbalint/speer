@@ -41,16 +41,16 @@ export default {
           text: 'Accept',
           action: () => {
             if(this.acceptAll)
-              this.$store.dispatch('setAcceptAllInSession', {partnerId: this.$store.state.popUp.file.sender._id, value: true})
+              this.$store.dispatch('setAcceptAllInSession', {
+                partnerId: this.$store.state.popUp.file.sender._id,
+                value: {preview: true}
+              })
               
             this.$store.dispatch('acceptFile', this.preview)
           }
         }
       ]
     }
-  },
-  created() {
-    this.acceptAll = this.$store.state.partners[this.$store.state.popUp.file.sender._id].file.acceptAllInSession
   },
   methods: {
     getFileSize(size) {

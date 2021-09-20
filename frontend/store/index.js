@@ -86,7 +86,7 @@ export const mutations = {
         buffer: [],
         message: null,
         image: null,
-        acceptAllInSession: false,
+        acceptAllInSession: null,
       },
       call: {
         isInCall: false,
@@ -621,7 +621,9 @@ export const actions = {
     }
     else {
       ctx.state.partners[remoteId].file.connection.recvProperties.mode = 'accumulate'
-      ctx.state.partners[remoteId].file.connection.onReceive = file => ctx.commit('popUp/set', {popUp: 'image', value: file})
+      ctx.state.partners[remoteId].file.connection.onReceive = file => {
+        ctx.commit('popUp/set', {popUp: 'images', value: [...ctx.state.popUp.images, file]})
+      }
     }
 
     ctx.state.popUp.file.accept( percent => ctx.commit('setPercent', {remoteId, percent, index: messageIndex}) )
@@ -699,8 +701,12 @@ function setFileConnectionListeners(ctx, remoteId, connection) {
     request.sender = ctx.state.friends[remoteId]
     ctx.dispatch('popUp/set', {popUp: 'file', value: request})
 
-    if(ctx.state.partners[remoteId].file.acceptAllInSession)
-      ctx.dispatch('acceptFile', false)
+    if(ctx.state.partners[remoteId].file.acceptAllInSession) {
+      let isImage = request.file.type.startsWith('image')
+      let shouldPreview = ctx.state.partners[remoteId].file.acceptAllInSession.preview
+
+      ctx.dispatch('acceptFile', isImage && shouldPreview)
+    }
     else {
       ctx.state.sounds.message.currentTime = 0
       ctx.state.sounds.message.play().catch(err => {})
