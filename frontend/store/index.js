@@ -519,10 +519,10 @@ export const actions = {
           })
     
           await ctx.state.partners[remoteId].file.connection.send(file, percentCallback)
-          .catch( err => {
-            console.error(err)
-            ctx.commit('removeMessage', {remoteId, index: messageIndex})
-          })
+            .catch( err => {
+              console.error(err)
+              ctx.commit('removeMessage', {remoteId, index: messageIndex})
+            })
         }
 
         resolve()

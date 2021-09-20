@@ -115,7 +115,7 @@ export default {
     navigator.serviceWorker.addEventListener('message', this.handleSWMessage)
     navigator.serviceWorker.getRegistration()
       .then( registration => {
-        if(registration) {
+        if(registration && registration.active) {
           this.swRegistration = registration
           this.swRegistration.active.postMessage({action: 'ready-to-receive'})
 
@@ -129,6 +129,22 @@ export default {
         if(wasBreaking) this.showBreakingPopUp = true
       })
       .catch( err => console.error(err) )
+
+    window.onbeforeunload = () => {
+      if(this.$store.getters.call.isInCall)
+        return 'You are still in a call! Do you really want to close Speer?'
+
+      for(let partner in this.$store.state.partners) {
+        if(!this.$store.state.partners[partner].file || !this.$store.state.partners[partner].file.connection)
+          continue
+        
+        if(this.$store.state.partners[partner].file.connection.isSending)
+          return 'You are sending a filel! Do you really want to close Speer?'
+
+        if(this.$store.state.partners[partner].file.connection.isReceiving)
+          return 'You are receiving a filel! Do you really want to close Speer?'
+      }
+    }
   },
   methods: {
     refreshToUpdate() {
@@ -197,6 +213,8 @@ export default {
 
     if(this.$store.state.sideBarDrag)
       this.$store.state.sideBarDrag.stop()
+
+    this.$store.dispatch('reset')
   },
   components: {
     SideBar,

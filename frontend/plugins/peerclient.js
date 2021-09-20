@@ -213,6 +213,7 @@ class Connection {
 class FileConnection {
   constructor(peer) {
     this.isSending = false
+    this.isReceiving = false
 
     this.peer = peer
     this.peer.on('error', this._handleChannelError.bind(this))
@@ -271,6 +272,7 @@ class FileConnection {
             data: 'decline',
           }))
 
+        this.isReceiving = true
         this.recvProperties.percentCallback = callback
         this._waitForFile()
 
@@ -298,7 +300,7 @@ class FileConnection {
     if(
       this._isAckPayload(data) &&
       this.sendProperties.chunkIndex%this.sendProperties.chunkCountInBatch == 0
-      ) {
+    ) {
       this._sendFileChunks()
     }
   }
@@ -327,7 +329,7 @@ class FileConnection {
     if(
       !this._isAckPayload(data) ||
       this.sendProperties.chunkIndex%this.sendProperties.chunkCountInBatch != 0
-      ) {
+    ) {
       this.bindedOnData(data)
     }
   }
@@ -347,7 +349,6 @@ class FileConnection {
     if(this.sendProperties.chunkIndex == this.sendProperties.chunkCount) {
       console.timeEnd('file sending')
       this.sendProperties.percentCallback(this.sendProperties.chunkIndex/this.sendProperties.chunkCount)
-      this.isSending = false
       this.sendProperties.resolve()
       this._resetSend()
     }
@@ -400,6 +401,7 @@ class FileConnection {
     }
 
     this.peer.on('data', this.bindedSendConfigCheck)
+    this.isSending = false
   }
 
   _resetRecv() {
@@ -419,6 +421,7 @@ class FileConnection {
     }
 
     this.peer.on('data', this.bindedRequestConfigCheck)
+    this.isReceiving = false
   }
 
   _sendConfigCheck(data) {

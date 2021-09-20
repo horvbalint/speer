@@ -55,7 +55,7 @@
       </div>
     </div>
 
-    <div class="messages" @dragover="handleDragOver($event)" @drop="hanldeDrop($event)" @dragleave="handleDragLeave($event)">
+    <div class="messages" ref="messages" @dragover="handleDragOver($event)" @drop="hanldeDrop($event)" @dragleave="handleDragLeave($event)">
       <div v-if="fileDragOver" class="drag-topper">
         <p>Drop files here to send them!</p>
       </div>
@@ -243,6 +243,13 @@ export default {
         this.$store.dispatch('popUp/open', 'filesToConfirm')
 
       document.addEventListener('paste', this.handlePasteEvent)
+    },
+    '$store.getters.partner.text.messages': function(newVal) {
+      this.$nextTick( () => {
+        if(this.$refs.messages) {
+          this.$refs.messages.scrollTop = this.$refs.messages.scrollHeight
+        }
+      })
     }
   },
 }
@@ -358,7 +365,7 @@ export default {
 .index {
   display: flex;
   flex-direction: column;
-  /* padding-bottom: 5px; */
+  height: 100vh;
 }
 .header {
   display: flex;
@@ -389,9 +396,11 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  justify-content: flex-end;
-  height: 100%;
+  flex: 1;
   overflow: auto;
+}
+.messages > :first-child {
+  margin-top: auto
 }
 .drag-topper {
   position: absolute;
@@ -429,7 +438,7 @@ export default {
   padding: 5px 15px 5px 20px;
   font-size: var(--p-size);
   user-select: text;
-  word-break: break-all;
+  word-break: break-word;
 }
 .percent {
   height: 5px;

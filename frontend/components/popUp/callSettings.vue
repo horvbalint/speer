@@ -128,5 +128,6 @@ h3 {
 .sources select {
   border-radius: 5px;
   background: var(--white);
+  max-width: 100%;
 }
 </style>

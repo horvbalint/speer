@@ -198,6 +198,7 @@ input {
   text-align: center;
   color: var(--accent-color);
   font-size: 18px;
+  z-index: -1;
 }
 .learn-more:link {
   color: var(--accent-color);
