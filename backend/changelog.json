@@ -3,6 +3,7 @@
     "title": "No more misclicks!",
     "changes": [
       "A confirmation pop-up is shown, when one wants to close Speer while a call or a file sending is in progress",
+      "The 'Accept all in session' option now works with the 'Just open the image' one",
       "URLs sent can be clicked to open them on a new page",
       "Added a support button to the Profile menu",
       "Multiple fixes"
