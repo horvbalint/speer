@@ -43,7 +43,7 @@ export default {
             if(this.acceptAll)
               this.$store.dispatch('setAcceptAllInSession', {
                 partnerId: this.$store.state.popUp.file.sender._id,
-                value: {preview: true}
+                value: {preview: this.preview}
               })
               
             this.$store.dispatch('acceptFile', this.preview)
