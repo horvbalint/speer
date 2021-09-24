@@ -1,4 +1,13 @@
 {
+  "1.7.12": {
+    "title": "Image preview loader",
+    "changes": [
+      "While Speer loads an image to preview, a placeholder is shown with informations about the image",
+      "Fixed an issue where 'Accept all in session' option would also set the 'Just open the image' one"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
   "1.7.11": {
     "title": "No more misclicks!",
     "changes": [
