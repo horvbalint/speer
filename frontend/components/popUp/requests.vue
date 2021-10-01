@@ -3,7 +3,8 @@
     title="Friend request"
     icon="fa-user-plus"
     :buttons="buttons"
-    noClose
+    :closeWithSwipe="false"
+    :closeWithTopper="false"
   >
     <div class="img" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.requests[0].avatar}')`}"/>
 

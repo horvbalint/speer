@@ -485,6 +485,7 @@ router.get('/breaking/:version', (req, res) => {
 
 router.post('/feedback', (req, res) => {
   req.body.stepsToReproduce = req.body.stepsToReproduce.slice(0, 9)
+  req.body.date = new Date()
 
   Feedback.create(req.body)
     .then( () => res.send() )

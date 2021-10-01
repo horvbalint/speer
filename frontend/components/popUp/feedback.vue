@@ -6,7 +6,9 @@
     :buttons="buttons"
   >
     <div class="feedback">
-      <h4 class="intro">Help the development with an anonymous feedback!</h4>
+      <h4 class="intro">If you want to track the state of your feedback, open an issue on <a href="https://github.com/horvbalint/speer/issues" target="_blank">GitHub</a></h4>
+      <p class="or">or</p>
+      <h4 class="intro">help the development with an anonymous feedback!</h4>
 
       <div class="section type">
         <h4>Choose the type of your feedback:</h4>
@@ -19,13 +21,11 @@
 
         <label for="other">Other</label>
         <input type="radio" v-model="type" value="other" id="other">
-        
-        <p v-if="type == 'bug'" class="github">If you want to be able to track the state of your bug, consider opening an issue on <a href="https://github.com/horvbalint/speer/issues" target="_blank">GitHub</a> instead.</p>
       </div>
 
 
       <div class="section description">
-        <h4>Please describe your {{correctType}}:</h4>
+        <h4>{{descriptionText}}</h4>
 
         <textarea v-model="description" maxlength="2000"/>
       </div>
@@ -64,11 +64,11 @@ export default {
     }
   },
   computed: {
-    correctType() {
+    descriptionText() {
       switch(this.type) {
-        case 'suggestion': return 'idea'
-        case 'bug': return 'issue'
-        case 'other': return 'suggestion'
+        case 'suggestion': return  'Please describe your idea:'
+        case 'bug': return  'Please describe your issue:'
+        case 'other': return 'Tell me what you think:'
       }
     }
   },
@@ -118,6 +118,25 @@ export default {
 .intro {
   margin-top: 10px;
   font-size: 18px;
+  font-weight: normal;
+}
+
+.intro a {
+  color: var(--accent-color);
+  font-weight: bold;
+}
+.intro a:link {
+  color: var(--accent-color);
+}
+.intro a:visited {
+  color: var(--accent-color);
+}
+.intro a:hover {
+  color: var(--accent-color);
+}
+
+.or {
+  margin-top: 10px;
 }
 
 .section {
@@ -132,23 +151,6 @@ export default {
 }
 .type label:first-of-type {
   margin-left: 0;
-}
-.github {
-  margin-top: 5px;
-  color: var(--accent-color);
-  font-size: 14px;
-}
-.github a {
-  font-weight: bold;
-}
-.github a:link {
-  color: var(--accent-color);
-}
-.github a:visited {
-  color: var(--accent-color);
-}
-.github a:hover {
-  color: var(--accent-color);
 }
 
 .description textarea {

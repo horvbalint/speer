@@ -57,11 +57,13 @@
 
 ## Browser support
 
-  The basic functionlities are supported in all major browsers, but some others are not. To get every feature and the fastest speeds use Chrome for now. Here are some of the known issues:
+  The basic functionlities are supported in all major desktop browsers, but some others are not. To get every feature and the fastest speeds use Chrome for now. Here are some of the known issues:
   - Push notifications are not supported in Safari
   - System audio sharing is only supported in Chrome
   - File sending in Firefox and Safari is only possible with a PonyFill which affects the performance a bit
   - File sending from the clipboard does not work in Firefox
+
+  Most mobile browsers are also supported on Android. The only feature not working is screen sharing as that is not implemented by mobile browsers currently. IOS users are sadly handicapped by Safari and can only use Speer to send and receive messages and files. If someone can help making Speer working on IOS, I would be very grateful.
 
 
 ## Disclaimer

@@ -5,6 +5,7 @@ const FeedbackSchema = mongoose.Schema({
   stepsToReproduce: [{type: String, maxlength: 500}],
   type: {type: String, enum: ['suggestion', 'bug', 'other']},
   version: {type: String, maxlength: 50},
+  date: Date,
 })
 
 module.exports = mongoose.model('Feedback', FeedbackSchema)

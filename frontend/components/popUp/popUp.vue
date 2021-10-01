@@ -1,6 +1,6 @@
 <template>
   <div class="popUp">
-    <div class="topper" @click="close()" ref="topper"></div>
+    <div class="topper" @click="handleTopperClick()" ref="topper"></div>
 
     <div class="pop-up" ref="popUp" :class="{withButtons: buttons && buttons.length}">
       <div ref="header" class="title" v-if="title">
@@ -35,9 +35,13 @@ export default {
     title: String,
     icon: String,
     buttons: Array,
-    noClose: {
+    closeWithSwipe: {
       type: Boolean,
-      default: false
+      default: true
+    },
+    closeWithTopper: {
+      type: Boolean,
+      default: true
     }
   },
   data() {
@@ -65,7 +69,7 @@ export default {
           this.$refs.topper.style.opacity = (100-percent) / 100
         },
         onEnd: percent => {
-          if(this.$props.noClose) return 0
+          if(!this.$props.closeWithSwipe) return 0
 
           if(percent < 30) return 0
           else return 100
@@ -81,6 +85,11 @@ export default {
     }
   },
   methods: {
+    handleTopperClick() {
+      if(!this.$props.closeWithTopper) return
+
+      this.close()
+    },
     close() {
       if(this.$store.state.screenWidth <= 600)
         this.$store.state.popUpDrag.stop()

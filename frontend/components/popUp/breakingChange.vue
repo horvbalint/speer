@@ -12,6 +12,7 @@
 
 <script>
 import PopUp from '~/components/popUp/popUp'
+import PackageJSON from '~/../package.json'
 
 export default {
   data() {
@@ -19,9 +20,12 @@ export default {
       buttons: [
         {
           text: 'Update',
-          action: () => location.reload()
+          action: () => {
+            localStorage['showChangelog'] = PackageJSON.version
+            location.reload()
+          }
         }
-      ]
+      ],
     }
   },
   components: {
