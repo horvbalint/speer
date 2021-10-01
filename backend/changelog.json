@@ -1,4 +1,15 @@
 {
+  "1.7.13": {
+    "title": "Caretaking",
+    "changes": [
+      "Fixed an issue where closing the call pop-up with a swipe would not hang the call up",
+      "The feedback pop-up now states the difference between github and in-app feedbacks more clear"
+    ],
+    "notes": [
+      "Speer is now verified on Brave, so you can support it with BAT if you would like to"
+    ],
+    "type": "fix"
+  },
   "1.7.12": {
     "title": "Image preview loader",
     "changes": [
