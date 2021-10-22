@@ -1,4 +1,14 @@
 {
+  "1.8.13": {
+    "title": "Video preview",
+    "changes": [
+      "Added the option to only play a received video without saving it"
+    ],
+    "notes": [
+      "If this option is used the video will be collected in the RAM memory of the device. This means that large files might crash Speer depending on the device"
+    ],
+    "type": "feature"
+  },
   "1.7.13": {
     "title": "Caretaking",
     "changes": [
