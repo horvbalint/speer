@@ -9,6 +9,7 @@ export const state = () => ({
   file: false,
   notification: false,
   images: [],
+  video: false,
   filesToConfirm: false,
   changelog: false,
   feedback: false,
@@ -24,6 +25,7 @@ export const mutations = {
     state.file = false
     state.notification = false
     state.images = []
+    state.video = false
     state.filesToConfirm = false
     state.changelog = false
     state.feedback = false

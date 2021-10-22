@@ -17,6 +17,11 @@
       <label for="preview">Just open the image (won't download)</label>
     </div>
 
+    <div v-if="$store.state.popUp.file.file.type.startsWith('video')" class="option">
+      <input type="checkbox" id="preview" v-model="preview">
+      <label for="preview">Just play the video (won't download)</label>
+    </div>
+
     <div class="option">
       <input type="checkbox" id="acceptAll" v-model="acceptAll">
       <label for="acceptAll">Accept every file from '{{$store.state.popUp.file.sender.username}}' in this session</label>

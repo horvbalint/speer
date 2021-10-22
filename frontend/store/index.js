@@ -621,8 +621,15 @@ export const actions = {
     }
     else {
       ctx.state.partners[remoteId].file.connection.recvProperties.mode = 'accumulate'
-      ctx.state.partners[remoteId].file.connection.onReceive = file => {
-        ctx.commit('popUp/set', {popUp: 'images', value: [...ctx.state.popUp.images, file]})
+      if(ctx.state.popUp.file.file.type.startsWith('video')) {
+        ctx.state.partners[remoteId].file.connection.onReceive = file => {
+          ctx.commit('popUp/set', {popUp: 'video', value: file})
+        }
+      }
+      else if(ctx.state.popUp.file.file.type.startsWith('image')) {
+        ctx.state.partners[remoteId].file.connection.onReceive = file => {
+          ctx.commit('popUp/set', {popUp: 'images', value: [...ctx.state.popUp.images, file]})
+        }
       }
     }
 

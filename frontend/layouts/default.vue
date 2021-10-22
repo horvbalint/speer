@@ -19,6 +19,7 @@
     <transition name="pop">
       <CallPopUp v-if="$store.state.popUp.call"></CallPopUp>
       <ImageViewer v-else-if="$store.state.popUp.images.length"/>
+      <VideoViewer v-else-if="$store.state.popUp.video"/>
       <FilePopUp v-else-if="$store.state.popUp.file"></FilePopUp>
       <PingPopUp v-else-if="$store.state.popUp.ping"></PingPopUp>
       <RequestPopUp v-else-if="$store.state.requests.length"/>
@@ -46,6 +47,7 @@ import CallPopUp from '~/components/popUp/call'
 import FilePopUp from '~/components/popUp/file'
 import NotificationPopUp from '~/components/popUp/notification'
 import ImageViewer from '~/components/popUp/imageViewer'
+import VideoViewer from '~/components/popUp/videoViewer'
 import FilesToConfirmPopUp from '~/components/popUp/filesToConfirm'
 import ChangelogPopUp from '~/components/popUp/changelog'
 import FeedbackPopUp from '~/components/popUp/feedback'
@@ -226,6 +228,7 @@ export default {
     CallPopUp,
     FilePopUp,
     ImageViewer,
+    VideoViewer,
     NotificationPopUp,
     FilesToConfirmPopUp,
     ChangelogPopUp,
