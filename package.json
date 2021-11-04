@@ -8,8 +8,8 @@
     "build": "nuxt build",
     "start": "nuxt start",
     "generate": "nuxt generate",
-    "server": "NODE_ENV=development node backend/speer.js",
-    "prod-server": "NODE_ENV=production node backend/speer.js"
+    "server": "cd backend && cargo run",
+    "prod-server": "cd backend && cargo run --release"
   },
   "dependencies": {
     "@nuxtjs/axios": "^5.13.1",
