@@ -3,7 +3,7 @@ use actix_web::{Error, FromRequest, HttpMessage, HttpRequest, cookie::Cookie, de
 use futures::{Future};
 use mongodb::{Collection, Database, bson::{doc, oid::ObjectId}};
 use serde::{Serialize, Deserialize};
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+use jsonwebtoken::{decode, Validation, DecodingKey};
 
 use crate::jwt::JWT;
 
@@ -56,9 +56,7 @@ async fn process_req_auth_data(collection: Collection<User>, cookie: Option<Cook
     let id = ObjectId::with_string(decoded_token.claims.id.as_str())
         .or(Err(ErrorUnauthorized("You are not logged in")))?;
 
-    let result = collection.find_one(doc! {"_id": id}, None).await
-        .or(Err(ErrorUnauthorized("You are not logged in")))?;
-
-    result
+    collection.find_one(doc! {"_id": id}, None).await
+        .or(Err(ErrorUnauthorized("You are not logged in")))?
         .ok_or(ErrorUnauthorized("You are not logged in"))
 }

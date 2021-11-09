@@ -11,14 +11,14 @@ export default ({$axios, redirect, store}) => {
     Promise.all([
       $axios.$get('/me'),
       $axios.$get('/friends'),
-      pusher.connect(),
-      peerClient.connect(),
+      // pusher.connect(),
+      // peerClient.connect(),
     ])
     .then( ([user, friends, pusher, peerClient]) => {
       store.dispatch('setUser', user)
       store.dispatch('setFriends', friends)
-      store.dispatch('setPusher', pusher)
-      store.dispatch('setPeerClient', peerClient)
+      // store.dispatch('setPusher', pusher)
+      // store.dispatch('setPeerClient', peerClient)
 
       resolve()
     })

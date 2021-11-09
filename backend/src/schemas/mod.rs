@@ -1,2 +1,5 @@
-pub use self::user::User;
 mod user;
+mod confirm;
+
+pub use user::User;
+pub use confirm::Confirm;

@@ -1,9 +1,6 @@
 use actix_cors::Cors;
 use actix_web::{App, HttpServer, middleware::Logger};
-use mongodb::{
-    options::ClientOptions,
-    Client,
-};
+use mongodb::{Client, options::ClientOptions};
 use env_logger;
 use std::env;
 
@@ -29,13 +26,19 @@ async fn main() -> std::io::Result<()> {
 
         App::new()
             .data(db.clone())
+            .data(db.collection_with_type::<schemas::User>("users"))
+            .data(db.collection_with_type::<schemas::Confirm>("confirms"))
             .wrap(cors)
             .wrap(Logger::default())
-            .service(routes::login)
-            .service(routes::me)
-            .service(routes::friends)
-            .service(routes::user_by_email)
-            .service(routes::files)
+            .service(routes::login_handler)
+            .service(routes::logout_handler)
+            .service(routes::confirm_handler)
+            .service(routes::cancel_handler)
+            .service(routes::resend_confirmation_handler)
+            .service(routes::user_by_email_handler)
+            .service(routes::me_handler)
+            .service(routes::friends_handler)
+            .service(routes::files_handler)
     })
         .bind("localhost:9001")?
         .run()

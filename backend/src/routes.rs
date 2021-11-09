@@ -1,23 +1,19 @@
-use actix_web::{HttpResponse, Responder, error, get, http::StatusCode, post, web::{Path, Json, Data, Bytes}, cookie::Cookie};
+use actix_web::{HttpResponse, Responder, error, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie};
 use futures::StreamExt;
-use mongodb::{
-    bson::{doc, document::Document, oid::ObjectId},
-    options::{FindOneOptions, FindOptions},
-    Database,
-    Collection
-};
+use mongodb::{Collection, Database, bson::doc, options::{FindOneOptions, FindOptions}};
 use serde::Deserialize;
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+use jsonwebtoken::{encode, Header, EncodingKey};
 use std::time::{SystemTime, UNIX_EPOCH};
 use std::path::PathBuf;
 use actix_files::NamedFile;
 use std::env;
 
 use crate::schemas::User;
+use crate::schemas::Confirm;
 use crate::jwt::JWT;
 
 extern crate bcrypt;
-use bcrypt::{hash, verify};
+use bcrypt::verify;
 
 #[derive(Deserialize)]
 pub struct LoginCredentials {
@@ -26,13 +22,13 @@ pub struct LoginCredentials {
 }
 
 #[post("/login")]
-pub async fn login(
+pub async fn login_handler(
     credentials: Json<LoginCredentials>,
-    db: Data<Database>
+    users_coll: Data<Collection<User>>
 ) -> Result<impl Responder, error::Error> {
     let filter = doc! {"email": &credentials.email};
 
-    let user = db.collection_with_type::<User>("users").find_one(filter, None).await
+    let user = users_coll.find_one(filter, None).await
         .or(Err(error::ErrorInternalServerError("User does not exist")))?
         .ok_or(error::ErrorInternalServerError(""))?;
 
@@ -58,14 +54,94 @@ pub async fn login(
     Ok(
         HttpResponse::build(StatusCode::OK)
         .cookie(cookie)
-        .body("All good")
+        .body("Logged in")
     )
 }
 
-#[get("/user/{email}")]
-pub async fn user_by_email(
+#[post("/logout")]
+pub async fn logout_handler() -> Result<impl Responder, error::Error> {
+    let cookie = Cookie::build("speer", "logged_out")
+        // .domain("www.rust-lang.org")
+        // .path("/")
+        // .secure(true)
+        .http_only(true)
+        .finish();
+
+    Ok(
+        HttpResponse::build(StatusCode::OK)
+        .cookie(cookie)
+        .body("Logged out")
+    )
+}
+
+#[post("/confirm/{token}")]
+pub async fn confirm_handler(
+    Path(token): Path<String>,
+    confirms_coll: Data<Collection<Confirm>>,
+    uesers_coll: Data<Collection<User>>,
+) -> Result<impl Responder, error::Error> {
+    let filter = doc! {"token": token};
+    let confirm = confirms_coll.find_one(filter, None).await
+        .or(Err(error::ErrorInternalServerError("Invalid token")))?
+        .ok_or(error::ErrorInternalServerError("Invalid token"))?;
+
+    let filter = doc! {"_id": confirm.user};
+    let update = doc! {"confirmed": true};
+    uesers_coll.update_one(filter, update, None).await
+        .or(Err(error::ErrorInternalServerError("")))?;
+
+    let filter = doc! {"_id": confirm._id};
+    confirms_coll.delete_one(filter, None).await.ok();
+
+    Ok("ok")
+}
+
+#[post("/cancel/{token}")]
+pub async fn cancel_handler(
+    Path(token): Path<String>,
+    confirms_coll: Data<Collection<Confirm>>,
+    users_coll: Data<Collection<User>>,
+) -> Result<impl Responder, error::Error> {
+    let filter = doc! {"token": token};
+    let confirm = confirms_coll.find_one(filter, None).await
+        .or(Err(error::ErrorInternalServerError("Invalid token")))?
+        .ok_or(error::ErrorInternalServerError("Invalid token"))?;
+
+    let filter = doc! {"_id": confirm.user, "confirmed": false};
+    users_coll.delete_one(filter, None).await
+        .or(Err(error::ErrorInternalServerError("Failed to cancel token")))?;
+
+    let filter = doc! {"_id": confirm._id};
+    confirms_coll.delete_one(filter, None).await.ok();
+
+    Ok("ok")
+}
+
+#[post("/resendConfirmation/{email}")]
+pub async fn resend_confirmation_handler(
     Path(email): Path<String>,
-    db: Data<Database>,
+    confirms_coll: Data<Collection<Confirm>>,
+    users_coll: Data<Collection<User>>,
+) -> Result<impl Responder, error::Error> {
+    let filter = doc! {"email": email, "confirmed": false, "deleted": false};
+    let user = users_coll.find_one(filter, None).await
+        .or(Err(error::ErrorBadRequest("Invalid email")))?
+        .ok_or(error::ErrorBadRequest("Invalid email"))?;
+    
+    let filter = doc! {"user": user._id};
+    let confirm = confirms_coll.find_one(filter, None).await
+        .or(Err(error::ErrorBadRequest("Failed to resend email")))?
+        .ok_or(error::ErrorBadRequest("Failed to resend email"))?;
+
+    // TODO: Send mail
+
+    Ok("ok")
+}
+
+#[get("/user/{email}")]
+pub async fn user_by_email_handler(
+    Path(email): Path<String>,
+    users_coll: Data<Collection<User>>,
     user: User,
 ) -> Result<impl Responder, error::Error> {
     let options = FindOneOptions::builder()
@@ -86,17 +162,15 @@ pub async fn user_by_email(
         ]
     };
 
-    let result = db.collection("users").find_one(filter, options).await
-        .or(Err(error::ErrorInternalServerError("")))?;
-
-    let user = result
+    let user = users_coll.find_one(filter, options).await
+        .or(Err(error::ErrorInternalServerError("")))?
         .ok_or(error::ErrorBadRequest(format!("No user found with email: {}", email)))?;
 
     Ok(Json(user))
 }
 
 #[get("/me")]
-pub async fn me(
+pub async fn me_handler(
     db: Data<Database>,
     user: User,
 ) -> Result<impl Responder, error::Error> {
@@ -109,18 +183,16 @@ pub async fn me(
 
     let filter = doc! {"_id": user._id};
 
-    let result = db.collection("users").find_one(filter, options).await
-        .or(Err(error::ErrorInternalServerError("")))?;
-
-    let user = result
+    let user = db.collection("users").find_one(filter, options).await
+        .or(Err(error::ErrorInternalServerError("")))?
         .ok_or(error::ErrorBadRequest(""))?;
 
     Ok(Json(user))
 }
 
 #[get("/friends")]
-pub async fn friends(
-    db: Data<Database>,
+pub async fn friends_handler(
+    users_coll: Data<Collection<User>>,
     user: User,
 ) -> Result<impl Responder, error::Error> {
     let options = FindOptions::builder()
@@ -133,7 +205,7 @@ pub async fn friends(
 
     let filter = doc! {"deleted": false, "confirmed": true, "_id": doc!{"$in": user.friends}};
 
-    let mut result = db.collection("users").find(filter, options).await
+    let mut result = users_coll.find(filter, options).await
         .or(Err(error::ErrorInternalServerError("")))?;
 
     let mut users = vec![];
@@ -145,7 +217,7 @@ pub async fn friends(
 }
 
 #[get("/static/{file}")]
-pub async fn files(
+pub async fn files_handler(
     Path(file): Path<String>,
     _user: User,
 ) -> Result<impl Responder, error::Error> {
