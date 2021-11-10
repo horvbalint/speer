@@ -1,12 +1,22 @@
 use actix_cors::Cors;
-use actix_web::{App, HttpServer, middleware::Logger};
+use actix_web::{App, FromRequest, HttpServer, middleware::Logger};
 use mongodb::{Client, options::ClientOptions};
 use env_logger;
 use std::env;
 
 mod schemas;
 mod routes;
+mod utils;
 mod jwt;
+
+pub struct CurrDir{
+    path: String
+}
+impl CurrDir {
+    fn new(path: String) -> Self {
+        Self{path}
+    }
+}
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -28,6 +38,8 @@ async fn main() -> std::io::Result<()> {
             .data(db.clone())
             .data(db.collection_with_type::<schemas::User>("users"))
             .data(db.collection_with_type::<schemas::Confirm>("confirms"))
+            .data(CurrDir::new(env::current_dir().unwrap().to_str().unwrap().to_string()))
+            .data(awmp::Parts::configure(|cfg| cfg.with_file_limit(20_000_000)))
             .wrap(cors)
             .wrap(Logger::default())
             .service(routes::login_handler)
@@ -35,6 +47,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::confirm_handler)
             .service(routes::cancel_handler)
             .service(routes::resend_confirmation_handler)
+            .service(routes::avatar_handler)
             .service(routes::user_by_email_handler)
             .service(routes::me_handler)
             .service(routes::friends_handler)
