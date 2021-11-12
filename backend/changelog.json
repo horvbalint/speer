@@ -1,4 +1,12 @@
 {
+  "1.8.14": {
+    "title": "Take it easy",
+    "changes": [
+      "Added an 'ease-out' animation for draggable components after realeasing them"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
   "1.8.13": {
     "title": "Video preview",
     "changes": [
