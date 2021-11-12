@@ -5,7 +5,8 @@ window.Drag = class Drag {
     setter,
     onEnd,
     onDone,
-    animationLength = 130,
+    animationLength = 250,
+    bezierPoints = [0, 0.85, 0.95, 1],
     direction = 'x',
     surface = window,
     target = null,
@@ -22,6 +23,7 @@ window.Drag = class Drag {
     this.surface = surface
     this.direction = direction
     this.multiplier = multiplier
+    this.bezierPoints = bezierPoints
     this.animationLength = animationLength
     this.stopped = !startOnCreated
     this.isMobile = isMobile
@@ -119,6 +121,7 @@ window.Drag = class Drag {
     this.endState = this.onEnd(this.state)
     this.endAnimationStartAt = this.state
     this.endAnimationRange = this.endState-this.state
+    this.endAnimationBezierPoints = this.bezierPoints.map( percent => this.endAnimationRange * percent )
     this.endAnimationStartTime = performance.now()
     this.endAnimationMinMax = this.endAnimationRange < 0 ? 'max' : 'min'
     requestAnimationFrame(this.bindedEndAnimate)
@@ -135,7 +138,22 @@ window.Drag = class Drag {
 
     let elapsedTime = performance.now() - this.endAnimationStartTime
     let animationPercent = elapsedTime / this.animationLength
-    let rangeDone = animationPercent * this.endAnimationRange
+
+    // below we calculate the range status using bezier "curves" (only on one axe)
+    // this can be used for animation timings
+    let bezierPoints = [...this.endAnimationBezierPoints]
+
+    for(let i=0; i<bezierPoints.length-1; ++i) {
+      for(let j=0; j<bezierPoints.length-1-i; ++j) {
+        let currRange = bezierPoints[j+1] - bezierPoints[j]
+        let rangeDone = animationPercent * currRange
+  
+        bezierPoints[j] += rangeDone
+      }
+    }
+
+    // the last remaining point is the current status
+    let rangeDone = bezierPoints[0]
 
     this.state = Math[this.endAnimationMinMax](this.endAnimationStartAt + rangeDone, this.endState)
     this.setter(this.state)

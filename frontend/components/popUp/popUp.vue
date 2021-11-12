@@ -118,6 +118,7 @@ export default {
     bottom: 0;
     right: 0;
     z-index: 100;
+    transition: var(--speed-normal) ease-out;
   }
   .pop-up {
     display: flex;
@@ -190,7 +191,7 @@ export default {
   }
 
   .pop-enter-active .pop-up, .pop-leave-active .pop-up {
-    transition: var(--speed-normal);
+    transition: var(--speed-normal) ease-out;
   }
   .pop-enter .pop-up, .pop-leave-to .pop-up {
     opacity: 0;
@@ -260,8 +261,7 @@ export default {
     }
 
     .pop-enter .pop-up, .pop-leave-to .pop-up {
-      opacity: 0;
-      bottom: -100%;
+      opacity: 1;
       transform: translateY(100%);
     }
   }

@@ -282,10 +282,6 @@ export default {
   position: relative;
 }
 
-.pop-enter-active, .pop-leave-active {
-  transition: var(--speed-normal);
-}
-
 .version-noti {
   position: fixed;
   bottom: 10px;
