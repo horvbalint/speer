@@ -23,7 +23,10 @@ export default {
     meta: [
       { charset: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' },
-      { hid: 'description', name: 'description', content: 'Speer is a fast, privacy focused and open source communication app for various use cases.' }
+      { hid: 'description', name: 'description', content: 'Speer is a fast, privacy focused and open source communication app for various use cases.' },
+      { property: 'og:title', content: 'Speer' },
+      { property: 'og:description', content: 'Speer is a fast, privacy focused and open source communication app for various use cases.' },
+      { property: 'og:image', content: 'https://speer.fun/icon.png' },
     ],
     link: [
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
