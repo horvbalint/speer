@@ -1,19 +1,44 @@
 <template>
   <div class="call" ref="call">
-    <div v-show="!$store.getters.call.hasRemoteVideo" class="noImage">
-      <img :src="`${$store.state.backendURL}/static/${$store.state.call.partner.avatar}`">
+    <div v-if="!choosenPartnerCall.hasRemoteVideo" class="noImage">
+      <img :src="`${$store.state.backendURL}/static/${choosenPartner.avatar}`">
 
-      <p v-if="!$store.getters.call.remoteStream">Waiting for {{$store.state.call.partner.username}} to response...</p>
+      <p v-if="!choosenPartnerCall.remoteStream">Waiting for {{choosenPartner.username}} to response...</p>
       <p v-else>{{ currentDuration }}</p>
     </div>
+    <video v-else :srcObject.prop="choosenPartnerCall.remoteStream" class="video" autoplay/>
 
-    <transition name="pop">
-      <CallSettings v-if="$store.state.popUp.callSettings" :sources="sources"/>
-    </transition>
+    <div class="videoThumbnails">
+      <!-- <div v-for="partner in this.$store.state.call.partners" :key="partner._id" class="thumbnail" :class="{choosen: choosenPartnerCall == $store.state.partners[partner._id].call}">
+        <img v-if="!$store.state.partners[partner._id].call.hasRemoteVideo" :src="`${$store.state.backendURL}/static/${partner.avatar}`">
+        <video v-else :srcObject.prop="$store.state.partners[partner._id].call.remoteStream" autoplay muted/>
 
-    <video v-show="$store.getters.call.hasRemoteVideo" class="video" ref="video" autoplay></video>
-    <video v-show="$store.getters.call.tracks.video.main || $store.getters.call.tracks.video.screen" class="localVideo" ref="localVideo" autoplay muted></video>
-    <audio hidden ref="secondAudio" autoplay></audio>
+        <p>{{partner.username}}</p>
+      </div> -->
+
+      <div class="thumbnail choosen">
+        <video :srcObject.prop="choosenPartnerCall.remoteStream" autoplay muted/>
+        <p>Egyik partner</p>
+      </div>
+
+      <div class="thumbnail">
+        <img :src="`${$store.state.backendURL}/static/${choosenPartner.avatar}`">
+        <p>Masik nagyon hosszu nevu partner</p>
+      </div>
+
+      <i class="fas fa-user-plus" @click="$store.dispatch('popUp/open', 'addCallPartner')"/>
+
+      <template v-if="hasLocalVideo">
+        <hr>
+  
+        <div v-if="hasLocalVideo" class="thumbnail own" ref="localVideo">
+          <video :srcObject.prop="$store.state.call.stream" autoplay muted/>
+          <p>Your video stream</p>
+        </div>
+      </template>
+    </div>
+
+    <audio ref="secondAudio" hidden autoplay/>
 
     <i class="fas fa-cog settings-btn" @click="$store.dispatch('popUp/open', 'callSettings')"/>
 
@@ -23,25 +48,29 @@
       </div>
 
       <div>
-        <i v-if="$store.getters.call.tracks.audio.main" class="fas fa-microphone" @click="$store.dispatch('call/muteAudio')"></i>
+        <i v-if="$store.state.call.tracks.audio.main" class="fas fa-microphone" @click="$store.dispatch('call/muteAudio')"></i>
         <i v-else class="fas fa-microphone-slash" @click="$store.dispatch('call/unmuteAudio')"></i>
       </div>
 
       <div>
-        <i v-if="$store.getters.call.tracks.video.main" class="fas fa-video" @click="$store.dispatch('call/disableVideo')"></i>
+        <i v-if="$store.state.call.tracks.video.main" class="fas fa-video" @click="$store.dispatch('call/disableVideo')"></i>
         <i v-else class="fas fa-video-slash" @click="$store.dispatch('call/enableVideo')"></i>
       </div>
 
       <div v-if="canScreenShare">
-        <i v-if="$store.getters.call.tracks.video.screen" class="fas fa-times" @click="$store.dispatch('call/stopScreenCapture')"></i>
+        <i v-if="$store.state.call.tracks.video.screen" class="fas fa-times" @click="$store.dispatch('call/stopScreenCapture')"></i>
         <i v-else class="fas fa-desktop" @click="$store.dispatch('call/startScreenCapture')"></i>
       </div>
 
       <div>
-        <i v-if="!$store.state.call.fullScreen" class="fas fa-expand" @click="requestFullScreen()"></i>
+        <i v-if="!$store.state.call.isFullScreen" class="fas fa-expand" @click="requestFullScreen()"></i>
         <i v-else class="fas fa-compress" @click="leaveFullScreen()"></i>
       </div>
     </div>
+
+    <transition name="pop">
+      <CallSettings v-if="$store.state.popUp.callSettings" :sources="sources"/>
+    </transition>
   </div>
 </template>
 
@@ -54,14 +83,28 @@ export default {
       timeOut: null,
       currentDuration: '00:00',
       canScreenShare: false,
+      choosenPartner: null,
       sources: {
         audio: [],
         video: [],
-      }
+      },
+    }
+  },
+  computed: {
+    choosenPartnerCall() {
+      if(!this.choosenPartner) return null
+
+      return this.$store.state.partners[this.choosenPartner._id].call
+    },
+    hasLocalVideo() {
+      return !!this.$store.state.call.tracks.video.main || !!this.$store.state.call.tracks.video.screen
     }
   },
   created() {
-    if(navigator.mediaDevices.getDisplayMedia) this.canScreenShare = true
+    this.choosenPartner = this.$store.state.call.partners[0]
+
+    if(navigator.mediaDevices.getDisplayMedia)
+      this.canScreenShare = true
 
     navigator.mediaDevices.enumerateDevices()
     .then( devices => {
@@ -73,20 +116,16 @@ export default {
       }
     })
   },
-  mounted() {
-    if(this.$store.getters.call.stream)
-      this.$refs.localVideo.srcObject = this.$store.getters.call.stream
-  },
   methods: {
     requestFullScreen() {
       let promise = this.$refs.call.requestFullscreen ?  this.$refs.call.requestFullscreen() : this.$refs.call.webkitRequestFullscreen()
 
       promise.then( () => {
-        this.$store.dispatch('call/setFullScreen', true)
+        this.$store.dispatch('call/setIsFullScreen', true)
 
         document.addEventListener('fullscreenchange', () => {
           if(!document.fullscreenElement)
-            this.$store.dispatch('call/setFullScreen', false)
+            this.$store.dispatch('call/setIsFullScreen', false)
         })
       })
     },
@@ -94,10 +133,10 @@ export default {
       if (document.exitFullscreen) document.exitFullscreen()
       else if (document.webkitExitFullscreen) document.webkitExitFullscreen()
 
-      this.$store.dispatch('call/setFullScreen', false)
+      this.$store.dispatch('call/setIsFullScreen', false)
     },
     calculateCallDuration() {
-      let duration = Math.floor((Date.now()-this.$store.getters.call.startTime)/1000)
+      let duration = Math.floor((Date.now()-this.choosenPartnerCall.startTime)/1000)
 
       let hours = Math.floor(duration / 3600)
       let minutes = Math.floor((duration - (hours*3600)) / 60)
@@ -112,30 +151,23 @@ export default {
     }
   },
   watch: {
-    '$store.getters.call.remoteStream': function() {
-      if(!this.$store.getters.call.remoteStream) return
+    'choosenPartnerCall.remoteStream': function() {
+      if(!this.choosenPartnerCall.remoteStream) return
 
-      this.timeOut = setInterval(this.calculateCallDuration, 1000)
+      if(!this.timeOut)
+        this.timeOut = setInterval(this.calculateCallDuration, 1000)
 
-      this.$refs.video.srcObject = this.$store.getters.call.remoteStream
-
-      this.$store.getters.call.remoteStream.addEventListener('addtrack', ({track}) => {
-        if(!this.$refs.secondAudio) return
-        if(this.$store.getters.call.remoteStream.getAudioTracks().length < 2) return
+      this.choosenPartnerCall.remoteStream.addEventListener('addtrack', ({track}) => {
+        if(this.choosenPartnerCall.remoteStream.getAudioTracks().length < 2) return
 
         this.$refs.secondAudio.srcObject = new MediaStream([track])
       })
 
-      this.$store.getters.call.remoteStream.addEventListener('removetrack', () => {
+      this.choosenPartnerCall.remoteStream.addEventListener('removetrack', () => {
         if(!this.$refs.secondAudio) return
 
         this.$refs.secondAudio.srcObject = null
       })
-    },
-    '$store.getters.call.stream': function() {
-      if(!this.$refs.localVideo) return
-
-      this.$refs.localVideo.srcObject = this.$store.getters.call.stream
     },
   },
   beforeDestroy() {
@@ -186,20 +218,81 @@ export default {
   text-align: center;
   margin-top: 20px;
 }
-.localVideo {
+.videoThumbnails {
   position: absolute;
   right: 0;
   top: 0;
-  max-width: 25%;
-  max-height: 25%;
-  border: 5px solid var(--bg-color);
+  height: 15%;
+  max-height: 100px;
   border-radius: 0 0 0 10px;
-  background: black;
-  opacity: .4;
-  transition: .3s;
+  background: var(--bg-color);
+  padding: 5px;
+  display: flex;
+  align-items: center;
 }
-.localVideo:hover {
+.videoThumbnails .thumbnail {
+  position: relative;
+  aspect-ratio: 4/3;
+  height: 100%;
+  margin-right: 10px;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--side-color);
+}
+.videoThumbnails .thumbnail:last-child {
+  margin-right: 0;
+}
+.videoThumbnails .choosen {
+  border: 3px solid var(--green);
+}
+.videoThumbnails .own {
+  border: 3px solid var(--yellow);
+  aspect-ratio: auto;
+}
+.videoThumbnails .thumbnail video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.videoThumbnails .thumbnail img {
+  aspect-ratio: 1/1;
+  height: 80%;
+  border-radius: 100%;
+}
+.videoThumbnails .thumbnail p {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  padding: 5px;
+  color: var(--accent-color);
+  background: rgba(0, 0, 0, 0.8);
+  word-break: break-word;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  opacity: 0;
+  transition: opacity var(--speed-fast);
+}
+.videoThumbnails .thumbnail p:hover {
   opacity: 1;
+}
+.videoThumbnails i {
+  font-size: 25px;
+  color: var(--accent-color);
+  margin: 5px;
+}
+.videoThumbnails hr {
+  border: 1px solid var(--accent-color);
+  border-radius: 5px;
+  margin-right: 10px;
+  height: 70%;
 }
 .controls {
   position: absolute;

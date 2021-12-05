@@ -56,12 +56,6 @@ export const getters = {
 
     return state.friends[state.partnerId]
   },
-  // the current call partner's data from the partners call object
-  call: state => {
-    if(!state.call.partner) return {}
-
-    return state.partners[state.call.partner._id].call
-  }
 }
 
 export const mutations = {
@@ -89,33 +83,11 @@ export const mutations = {
         acceptAllInSession: null,
       },
       call: {
-        isInCall: false,
         connection: null,
-        stream: null,
-        tracks: {
-          audio: {
-            main: null,
-            screen: null,
-          },
-          video: {
-            main: null,
-            screen: null,
-          },
-        },
         remoteStream: null,
         hasRemoteAudio: false,
         hasRemoteVideo: false,
-        constraints: {
-          video: {
-            height: { max: 1080 },
-            frameRate: { max: 25 },
-          },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-          }
-        },
-        startTime: null
+        startTime: null,
       }
     })
   },
@@ -123,8 +95,7 @@ export const mutations = {
     state.partners[remoteId][type].connection = connection
   },
   closeConnection(state, {type, remoteId}) {
-    if(remoteId == state.partnerId) state.partnerId = null
-    if(!state.partners[remoteId][type].connection) return
+    if(!state.partners[remoteId] || !state.partners[remoteId][type].connection) return
 
     state.partners[remoteId][type].connection.close()
     state.partners[remoteId][type].connection = null
@@ -154,7 +125,7 @@ export const mutations = {
       state.sounds.message.currentTime = 0
       state.sounds.message.play().catch(err => {})
     }
-    else if(!state.pageVisible || state.call.fullScreen) {
+    else if(!state.pageVisible || state.call.isFullScreen) {
       state.sounds.message.currentTime = 0
       state.sounds.message.play().catch(err => {})
     }
@@ -184,8 +155,6 @@ export const mutations = {
     state.filesToConfirm = []
     state.backendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001'
     state.frontendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun'
-    // state.backendURL = 'http://localhost:9001'
-    // state.frontendURL = 'http://localhost:9000'
     state.sounds = {
       message: null,
       call: null,
@@ -275,52 +244,21 @@ export const mutations = {
   setIsConnected(state, value) {
     state.isConnected = value
   },
-
-  // CALL STUFF
-  resetCall(state, {remoteId, full = false}) {
+  resetCall(state, remoteId) {
     if(!state.partners[remoteId]) return
 
-    state.partners[remoteId].call.isInCall = false
-    state.partners[remoteId].call.stream = null
-    state.partners[remoteId].call.tracks.audio.main = null
-    state.partners[remoteId].call.tracks.audio.screen = null
-    state.partners[remoteId].call.tracks.video.main = null
-    state.partners[remoteId].call.tracks.video.screen = null
     state.partners[remoteId].call.remoteStream = null
     state.partners[remoteId].call.hasRemoteAudio = false
     state.partners[remoteId].call.hasRemoteVideo = false
-    state.partners[remoteId].call.constraints = {
-      video: {
-        height: { max: 1080 },
-        frameRate: { max: 25 },
-      },
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-      }
-    }
     state.partners[remoteId].call.startTime = null
-    
-    if(full)
-      state.partners[remoteId].call.connection = null
-  },
-  setInCall(state, {remoteId, inCall}) {
-    state.partners[remoteId].call.isInCall = inCall
   },
   setCallConnection(state, {remoteId, connection}) {
     state.partners[remoteId].call.connection = connection
   },
-  setLocalStream(state, {remoteId, stream}) {
-    state.partners[remoteId].call.stream = stream
-
-    state.partners[remoteId].call.tracks.audio.main = stream.getAudioTracks()[0] || null
-    state.partners[remoteId].call.tracks.video.main = stream.getVideoTracks()[0] || null
-  },
-  setTrack(state, {remoteId, type, device, track}) {
-    state.partners[remoteId].call.tracks[type][device] = track
-  },
   setRemoteStream(state, {remoteId, stream}) {
-    if(!state.partners[remoteId].call.startTime) state.partners[remoteId].call.startTime = Date.now()
+    if(!state.partners[remoteId].call.startTime)
+      state.partners[remoteId].call.startTime = Date.now()
+    
     state.partners[remoteId].call.remoteStream = stream
 
     state.partners[remoteId].call.remoteStream.addEventListener('removetrack', () => {
@@ -330,9 +268,6 @@ export const mutations = {
 
     state.partners[remoteId].call.hasRemoteAudio = !!stream.getAudioTracks().length
     state.partners[remoteId].call.hasRemoteVideo = !!stream.getVideoTracks().length
-  },
-  setConstraints(state, {remoteId, constraints}) {
-    state.partners[remoteId].call.constraints = constraints
   },
   setConnecting(state, {type, value}) {
     state.connecting[type] = value
@@ -352,7 +287,7 @@ export const actions = {
 
     peerClient._onClose = () => {
       ctx.commit('setIsConnected', false)
-      errorBox('Connection lost with the server!', 'You can still use your established connections, but can not create new ones untill reconnected.', {
+      errorBox('Connection lost with the server!', 'You can still use your established connections, but can not create new ones until reconnected.', {
         text: 'Reload',
         action: () => location.reload(),
       })
@@ -384,8 +319,12 @@ export const actions = {
     pusher.subscribe( 'request', request => ctx.commit('addRequest', request) )
     pusher.subscribe( 'login', remoteId => ctx.commit('setOnline', {remoteId, online: true}) )
     pusher.subscribe( 'logout', remoteId => {
-      if(ctx.state.partners[remoteId])
+      if(ctx.state.partners[remoteId]) {
+        if(ctx.state.call.partners.find(p => p._id == remoteId))
+          ctx.dispatch('call/hangUp')
+          
         ctx.dispatch('resetPartner', remoteId)
+      }
 
       if(ctx.state.popUp.call && ctx.state.popUp.call.caller._id == remoteId)
         ctx.dispatch('popUp/set', {popUp: 'call', value: null})
@@ -467,33 +406,23 @@ export const actions = {
       return Promise.resolve()
   },
   reset(ctx) {
-    if(ctx.state.call.partner)
+    if(ctx.getters['call/isInCall'])
       ctx.dispatch('call/hangUp')
 
-    for(let remoteId in ctx.state.partners) {
-      ctx.commit('closeConnection', {remoteId, type: 'text'})
-      ctx.commit('closeConnection', {remoteId, type: 'file'})
-      ctx.dispatch('resetCall', {remoteId, full: true})
-    }
+    for(let remoteId in ctx.state.partners)
+      ctx.dispatch('resetPartner', remoteId)
 
     ctx.commit('reset')
   },
   resetPartner(ctx, remoteId) {
-    if(ctx.state.call.partner && ctx.state.call.partner._id === remoteId)
-      ctx.dispatch('call/hangUp')
+    if(remoteId == ctx.state.partnerId)
+      ctx.dispatch('closePartner', remoteId)
 
     ctx.commit('closeConnection', {remoteId, type: 'text'})
     ctx.commit('closeConnection', {remoteId, type: 'file'})
-    ctx.dispatch('resetCall', {remoteId, full: true})
-  },
-  resetCall(ctx, {remoteId, full = false}) {
-    ctx.dispatch('call/disableVideo', remoteId)
-    ctx.dispatch('call/stopScreenCapture', remoteId)
-    ctx.dispatch('call/muteAudio', remoteId)
+    ctx.commit('closeConnection', {remoteId, type: 'call'})
 
-    ctx.commit('resetCall', {remoteId, full})
-
-    ctx.dispatch('stopSound', 'callWaiting')
+    ctx.commit('resetCall', remoteId)
   },
   sendMessage(ctx, {remoteId = ctx.state.partnerId, message}) {
     ctx.commit('addMessage', {remoteId, senderId: ctx.state.user._id, message})
@@ -550,7 +479,7 @@ export const actions = {
         .catch( err => reject(err) )
     })
   },
-  closeParnter(ctx) {
+  closePartner(ctx) {
     ctx.commit('setPartnerId', null)
   },
   acceptRequest(ctx) {

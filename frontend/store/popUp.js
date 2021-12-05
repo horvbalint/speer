@@ -1,6 +1,7 @@
 export const strict = false
 
 export const state = () => ({
+  addCallPartner: false,
   addFriends: false,
   profile: false,
   call: false,
@@ -17,6 +18,7 @@ export const state = () => ({
 
 export const mutations = {
   reset(state) {
+    state.addCallPartner = false
     state.addFriends = false
     state.profile = false
     state.call = false

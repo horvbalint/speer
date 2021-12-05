@@ -26,11 +26,11 @@ const upload          = multer({
   }
 })
 
-webpush.setVapidDetails(
-  `mailto:${config.vapid.mailto}`,
-  config.vapid.public,
-  config.vapid.private
-)
+// webpush.setVapidDetails(
+//   `mailto:${config.vapid.mailto}`,
+//   config.vapid.public,
+//   config.vapid.private
+// )
 console.log("WebPush ready")
 
 passport.use( new LocalStrategy({

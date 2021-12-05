@@ -1,8 +1,8 @@
 <template>
   <div class="container">
-    <div class="page" :class="{inCall: $store.getters.call.isInCall}">
+    <div class="page" :class="{inCall: $store.getters['call/isInCall']}">
       <transition name="scale" mode="out-in">
-        <Call class="call-section" v-if="$store.getters.call.isInCall"/>
+        <Call class="call-section" v-if="$store.getters['call/isInCall']"/>
       </transition>
       <Nuxt class="nuxt"/>
     </div>
@@ -25,6 +25,7 @@
       <RequestPopUp v-else-if="$store.state.requests.length"/>
       <ProfilePopUp v-else-if="$store.state.popUp.profile"/>
       <AddFriendsPopUp v-else-if="$store.state.popUp.addFriends"/>
+      <AddCallPartnerPopUp v-else-if="$store.state.popUp.addCallPartner"/>
       <NotificationPopUp v-else-if="$store.state.popUp.notification"/>
       <FilesToConfirmPopUp v-else-if="$store.state.popUp.filesToConfirm"/>
       <ChangelogPopUp v-else-if="$store.state.popUp.changelog"/>
@@ -40,6 +41,7 @@
 import SideBar from '~/components/sideBar'
 import Alert from '~/components/popUp/alert'
 import AddFriendsPopUp from '~/components/popUp/addFriends'
+import AddCallPartnerPopUp from '~/components/popUp/addCallPartner'
 import ProfilePopUp from '~/components/popUp/profile'
 import RequestPopUp from '~/components/popUp/requests'
 import PingPopUp from '~/components/popUp/ping'
@@ -133,7 +135,7 @@ export default {
       .catch( err => console.error(err) )
 
     window.onbeforeunload = () => {
-      if(this.$store.getters.call.isInCall)
+      if(this.$store.getters['call/isInCall'])
         return 'You are still in a call! Do you really want to close Speer?'
 
       for(let partner in this.$store.state.partners) {
@@ -222,6 +224,7 @@ export default {
     SideBar,
     Alert,
     AddFriendsPopUp,
+    AddCallPartnerPopUp,
     ProfilePopUp,
     RequestPopUp,
     PingPopUp,

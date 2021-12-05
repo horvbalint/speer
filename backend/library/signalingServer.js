@@ -5,6 +5,7 @@ const SessionParser = require('../globals/sessionParser')
 module.exports = class SignalingServer {
   constructor(server, port, validateSignal = () => Promise.resolve(), onConnect = this.logStatus, onClose = this.logStatus) {
     this.connectedSockets = {}
+    this.groupsToValidate = {}
     this.validateSignal = validateSignal
     this.onConnect = onConnect
     this.onClose = onClose
@@ -60,6 +61,9 @@ module.exports = class SignalingServer {
     this.validateSignal(ws.speerId, message.remoteId)
       .then( () => {
         if(!this.connectedSockets[message.remoteId]) return
+
+        if(message.type == 'group')
+          return handleGroupMessage(message, ws)
     
         const rawMessage = {
           action: 'signal',
@@ -70,12 +74,66 @@ module.exports = class SignalingServer {
         }
         this.connectedSockets[message.remoteId].send( JSON.stringify(rawMessage) )
       })
-      .catch( err => {
-        ws.send(JSON.stringify({
-          error: 'Not friend',
-          remoteId: message.remoteId
-        }))
-      })
+      .catch( () => this.sendError(ws, 'Not friend') )
+  }
+
+  handleGroupMessage(message, ws) {
+    let groupId = message.data.groupId || this.generateGroupId()
+
+    let targetGroup = this.groupsToValidate[groupId]
+    if(!targetGroup) {
+      let validators = {}
+      for(let id of message.data) {
+        validators[id] = {
+          validated: false,
+          peerData: message.data,
+        }
+      }
+
+      groupsToValidate[groupId] = {
+        remoteId: message.remoteId,
+        validators
+      }
+    }
+    else {
+      if(!targetGroup.validators[ws.speerId])
+        return this.sendError(ws, 'Not in group')
+
+      targetGroup.validators[ws.speerId].validated = true
+
+      let isEveryoneValidated = Object.values(targetGroup.validators).every( v => v.validated )
+      if(isEveryoneValidated) {
+        let memberData = {}
+        for(let id in targetGroup.validators) {
+          memberData[id] = targetGroup.validators[id].peerData
+        }
+
+        const rawMessage = {
+          action: 'signal',
+          type: 'group',
+          data: memberData
+        }
+        this.connectedSockets[targetGroup.remoteId].send( JSON.stringify(rawMessage) )
+      }
+    }
+
+    groupsToValidate
+  }
+
+  generateGroupId() {
+    let id = Math.random().toString()
+    while(this.groupsToValidate[id]) {
+      id = Math.random().toString()
+    }
+
+    return id
+  }
+
+  sendError(ws, error, data) {
+    ws.send(JSON.stringify({
+      ...data,
+      error,
+    }))
   }
 
   removeClient(Id) {

@@ -40,7 +40,7 @@ export default class PeerClient {
       this._socket.addEventListener('message', event => {
         let data = JSON.parse(event.data)
 
-        if(data.error == 'Not friend') {
+        if(data.error) {
           if(this._signaling[data.remoteId]) {
             this._signaling[data.remoteId].reject(data.error)
             delete this._signaling[data.remoteId]
@@ -48,8 +48,9 @@ export default class PeerClient {
           
           return
         }
-  
-        if(!this._signaling[data.remoteId]) this._handleNewSignalConnection(data)
+
+        if(data.type == 'group') this._handleGroupConnection(data)
+        else if(!this._signaling[data.remoteId]) this._handleNewSignalConnection(data)
         else this._handleReceivedRequestedSignalData(data)
       })
     })
@@ -68,6 +69,16 @@ export default class PeerClient {
   // Creating call connection with a remote peer
   async createCallConnection(remoteId) {
     return new CallConnection(await this._signal({remoteId, initiator: true, type: 'call'}))
+  }
+
+  async createGroupConnection(remoteId, partners, type="call") {
+    let classToInstantiate = null
+
+    if(type == "basic") classToInstantiate = Connection
+    else if(type == "binary") classToInstantiate = FileConnection
+    else if(type == "call") classToInstantiate = CallConnection
+
+    return new classToInstantiate(await this._signal({remoteId, initiator: true, type: 'group', data: partners}))
   }
 
   destroy() {
@@ -90,18 +101,22 @@ export default class PeerClient {
     this._signaling[data.remoteId].peer.signal(data.peerData)
   }
 
+  _handleGroupConnection(data) {
+    onGroupConnection(data)
+  }
+
 
   // Sending connection request to remote peer / feeding new peerData to Simple-Peer
-  _signal({remoteId, type, initiator = false, peerData = null}) {
+  _signal({remoteId, type, initiator = false, peerData = null, data = null}) {
     return new Promise( (resolve, reject) => {
       this._signaling[remoteId] = {resolve, reject} // this needs to exist before the peer is created
-      this._signaling[remoteId].peer = this._createPeerForSignaling(remoteId, type, initiator)
+      this._signaling[remoteId].peer = this._createPeerForSignaling(remoteId, type, initiator, data)
       
       if(peerData) this._signaling[remoteId].peer.signal(peerData)
     })
   }
 
-  _createPeerForSignaling(remoteId, type, initiator) {
+  _createPeerForSignaling(remoteId, type, initiator, data) {
     let peer = new Peer({initiator, trickle: true})
 
     peer.on('signal', peerData => {
@@ -110,6 +125,7 @@ export default class PeerClient {
         remoteId: remoteId,
         peerData,
         type,
+        data,
       })
     })
     
@@ -156,6 +172,7 @@ export default class PeerClient {
   onConnection() { console.warn('You have to implement the "onConnection" function yourself!') }
   onFileConnection() { console.warn('You have to implement the "onFileConnection" function yourself!') }
   onCallConnection() { console.warn('You have to implement the "onCallConnection" function yourself!') }
+  onGroupConnection() { console.warn('You have to implement the "onCallConnection" function yourself!') }
   onClose() { console.warn('You have to implement the "onClose" function yourself!') }
 }
 

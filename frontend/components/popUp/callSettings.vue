@@ -52,13 +52,13 @@ export default {
   data() {
     return {
       constraints: {
-        frameRate: this.$store.getters.call.constraints.video.frameRate.max,
-        height: this.$store.getters.call.constraints.video.height.max,
-        echoCancellation: this.$store.getters.call.constraints.audio.echoCancellation,
+        frameRate: this.$store.state.call.constraints.video.frameRate.max,
+        height: this.$store.state.call.constraints.video.height.max,
+        echoCancellation: this.$store.state.call.constraints.audio.echoCancellation,
       },
       device: {
-        audio: this.$store.getters.call.constraints.audio.deviceId,
-        video: this.$store.getters.call.constraints.video.deviceId,
+        audio: this.$store.state.call.constraints.audio.deviceId,
+        video: this.$store.state.call.constraints.video.deviceId,
       },
       buttons: [
         {
@@ -73,8 +73,8 @@ export default {
     }
   },
   created() {
-    let audioTrack = this.$store.getters.call.stream.getAudioTracks()[0]
-    let videoTrack = this.$store.getters.call.stream.getVideoTracks()[0]
+    let audioTrack = this.$store.state.call.stream.getAudioTracks()[0]
+    let videoTrack = this.$store.state.call.stream.getVideoTracks()[0]
 
     if(audioTrack)
       this.device.audio = audioTrack.getSettings().deviceId
@@ -97,7 +97,7 @@ export default {
       if(this.device.video && !this.device.video.startsWith('screen:')) constraints.video.deviceId = this.device.video
       if(this.device.audio) constraints.audio.deviceId = this.device.audio
 
-      this.$store.dispatch('call/setConstraints', {constraints})
+      this.$store.dispatch('call/setConstraints', constraints)
       this.$store.dispatch('popUp/close', 'callSettings')
     }
   },

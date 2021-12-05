@@ -36,10 +36,10 @@
   
   <div v-else class="index">
     <div class="header">
-      <i class="fas fa-arrow-left" @click="$store.dispatch('closeParnter')"/>
+      <i class="fas fa-arrow-left" @click="$store.dispatch('closePartner')"/>
       <h2>{{ $store.getters.partnerFriend.username }}</h2>
       <div
-        v-if="!$store.getters.call.isInCall"
+        v-if="!$store.getters['call/isInCall']"
         :class="{connecting: $store.state.connecting.call == $store.getters.partnerFriend._id}"
       >
         <i
