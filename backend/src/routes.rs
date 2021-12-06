@@ -1,6 +1,6 @@
 use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie};
 use futures::StreamExt;
-use mongodb::{Collection, Database, bson::doc, options::{FindOneOptions, FindOptions}};
+use mongodb::{Collection, Database, bson::{doc}, options::{FindOneOptions, FindOptions}};
 use serde::Deserialize;
 use jsonwebtoken::{encode, Header, EncodingKey};
 use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}};
@@ -34,7 +34,7 @@ pub async fn login_handler(
 
     let user = users_coll.find_one(filter, None).await
         .or(Err(ErrorInternalServerError("User does not exist")))?
-        .ok_or(ErrorInternalServerError(""))?;
+        .ok_or(ErrorInternalServerError("ITT ITT"))?;
 
     let verify = verify(&credentials.password, user.password.as_str())
         .or(Err(ErrorUnauthorized("Password does not match")))?;
@@ -42,6 +42,7 @@ pub async fn login_handler(
     if !verify {
         return Err(ErrorUnauthorized("Password does not match"))
     }
+
 
     let current_utc = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs();
     let token_claims = JWT::new(user._id, current_utc + (24 * 60 * 60));
@@ -146,8 +147,8 @@ pub async fn resend_confirmation_handler(
 pub async fn avatar_handler(
     mut parts: awmp::Parts,
     users_coll: Data<Collection<User>>,
-    user: User,
     curr_dir : Data<CurrDir>,
+    user: User,
 ) -> Result<impl Responder, Error> {
     let files_path = format!("{}/files", curr_dir.path);
 
@@ -163,7 +164,7 @@ pub async fn avatar_handler(
     let save_res = uploaded_file.persist_in("/tmp")
         .or(Err(ErrorInternalServerError("Failed to save image")))?;
 
-    let tmp_path = save_res.display().to_string();
+    let tmp_path = save_res.to_str().unwrap();
     
     image::open(&tmp_path)
         .and_then(|img| {
@@ -184,6 +185,27 @@ pub async fn avatar_handler(
     }
 
     Ok(full_file_name)
+}
+
+#[get("/me")]
+pub async fn me_handler(
+    db: Data<Database>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    let options = FindOneOptions::builder()
+        .projection(doc! {
+            "password": 0,
+            "admin": 0,
+        })
+        .build();
+
+    let filter = doc! {"_id": user._id};
+
+    let user = db.collection("users").find_one(filter, options).await
+        .or(Err(ErrorInternalServerError("")))?
+        .ok_or(ErrorBadRequest(""))?;
+
+    Ok(Json(user))
 }
 
 #[get("/user/{email}")]
@@ -217,33 +239,11 @@ pub async fn user_by_email_handler(
     Ok(Json(user))
 }
 
-#[get("/me")]
-pub async fn me_handler(
-    db: Data<Database>,
-    user: User,
-) -> Result<impl Responder, Error> {
-    let options = FindOneOptions::builder()
-        .projection(doc! {
-            "password": 0,
-            "admin": 0,
-        })
-        .build();
-
-    let filter = doc! {"_id": user._id};
-
-    let user = db.collection("users").find_one(filter, options).await
-        .or(Err(ErrorInternalServerError("")))?
-        .ok_or(ErrorBadRequest(""))?;
-
-    Ok(Json(user))
-}
-
 #[get("/friends")]
 pub async fn friends_handler(
     db: Data<Database>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    dbg!(&user.friends);
     let filter = doc! {"deleted": false, "confirmed": true, "_id": {"$in": user.friends}};
     let options = FindOptions::builder()
         .projection(doc! {

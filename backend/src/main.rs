@@ -1,5 +1,6 @@
+use actix::Actor;
 use actix_cors::Cors;
-use actix_web::{App, FromRequest, HttpServer, middleware::Logger};
+use actix_web::{web, App, FromRequest, HttpServer, middleware::Logger};
 use mongodb::{Client, options::ClientOptions};
 use env_logger;
 use std::env;
@@ -8,6 +9,7 @@ mod schemas;
 mod routes;
 mod utils;
 mod jwt;
+mod ws;
 
 pub struct CurrDir{
     path: String
@@ -26,7 +28,9 @@ async fn main() -> std::io::Result<()> {
     let client_options = ClientOptions::parse("mongodb://localhost:27017").await.unwrap();
     let client = Client::with_options(client_options).unwrap();
     let db = client.database("speer");
+    let ws_server = ws::Server::new().start();
 
+    // starting the http server
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin("http://localhost:9000")
@@ -40,8 +44,10 @@ async fn main() -> std::io::Result<()> {
             .data(db.collection_with_type::<schemas::Confirm>("confirms"))
             .data(CurrDir::new(env::current_dir().unwrap().to_str().unwrap().to_string()))
             .data(awmp::Parts::configure(|cfg| cfg.with_file_limit(20_000_000)))
+            .data(ws_server.clone())
             .wrap(cors)
             .wrap(Logger::default())
+            .route("/ws/", web::get().to(ws::ws_route))
             .service(routes::login_handler)
             .service(routes::logout_handler)
             .service(routes::confirm_handler)

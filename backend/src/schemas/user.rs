@@ -7,7 +7,7 @@ use jsonwebtoken::{decode, Validation, DecodingKey};
 
 use crate::jwt::JWT;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Device {
     pub name: String,
     pub endpoint: String,
@@ -15,7 +15,7 @@ pub struct Device {
 }
 
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     pub _id: ObjectId,
     pub email: String,
