@@ -1,16 +1,21 @@
 use std::{time::{Instant, Duration}};
 use actix::{Actor, StreamHandler, Running, Addr, AsyncContext, ActorContext, Handler};
-use actix_web::{web::{self, Data}, Error, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
+use serde::Deserialize;
 
 use crate::schemas::User;
 use crate::ws::message;
 use crate::ws::server;
 
-use super::Server;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+
+#[derive(Deserialize)]
+struct PusherMessage {
+    action: String,
+    event: String,
+}
 
 #[derive(Debug)]
 pub struct Connection {
@@ -51,7 +56,30 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Connection {
         match msg {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             Ok(ws::Message::Pong(_)) => self.hb = Instant::now(),
-            Ok(ws::Message::Text(_text)) => {},
+            Ok(ws::Message::Text(text)) => {
+                let res = serde_json::from_str(&text);
+
+                match res {
+                    Ok(PusherMessage { action, event }) => {
+                        match action.as_str() {
+                            "subscribe" => {
+                                self.server.do_send(message::Subscribe{
+                                    event,
+                                    _id: self.user._id.to_string()
+                                })
+                            },
+                            "unsubscribe" => {
+                                self.server.do_send(message::Unsubscribe{
+                                    event,
+                                    _id: self.user._id.to_string()
+                                })
+                            },
+                            _ => {}
+                        }
+                    },
+                    _ => {}
+                }
+            },
             Ok(ws::Message::Close(_)) => ctx.stop(),
             _ => (),
         }
@@ -67,6 +95,14 @@ impl Handler<message::Send> for Connection {
 }
 
 impl Connection {
+    pub fn new(user: User, server: Addr<server::Server>) -> Connection {
+        Connection {
+            hb: Instant::now(),
+            user,
+            server
+        }
+    }
+
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
@@ -77,20 +113,5 @@ impl Connection {
 
             ctx.ping(b"PING");
         });
-    }
-}
-
-pub async fn ws_route(
-    req: HttpRequest,
-    stream: web::Payload,
-    server: Data<Addr<Server>>,
-    user: User
-) -> Result<HttpResponse, Error> {
-    let connection = Connection {
-        hb: Instant::now(),
-        server: server.get_ref().clone(),
-        user,
-    };
-
-    ws::start(connection, &req, stream)
+    } 
 }
