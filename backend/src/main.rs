@@ -56,6 +56,7 @@ async fn main() -> std::io::Result<()> {
             .service(routes::avatar_handler)
             .service(routes::user_by_email_handler)
             .service(routes::me_handler)
+            .service(routes::onlines_handler)
             .service(routes::friends_handler)
             .service(routes::files_handler)
     })

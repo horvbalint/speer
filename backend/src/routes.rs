@@ -1,3 +1,4 @@
+use actix::Addr;
 use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie};
 use futures::StreamExt;
 use mongodb::{Collection, Database, bson::{doc}, options::{FindOneOptions, FindOptions}};
@@ -7,7 +8,7 @@ use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}};
 use std::path::PathBuf;
 use actix_files::NamedFile;
 use image::imageops::FilterType;
-use crate::CurrDir;
+use crate::{CurrDir, ws::{Server, ConnectedIds}};
 use std::env;
 
 use crate::schemas::User;
@@ -206,6 +207,21 @@ pub async fn me_handler(
         .ok_or(ErrorBadRequest(""))?;
 
     Ok(Json(user))
+}
+
+#[get("/onlines")]
+pub async fn onlines_handler(
+    ws_addr: Data<Addr<Server>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    let onlines = ws_addr.send(ConnectedIds).await
+        .or(Err(ErrorInternalServerError("")))?
+        .ok_or(ErrorInternalServerError(""))?;
+
+    let friend_ids: Vec<String> = user.friends.iter().map(|f| f.to_string()).collect();
+    let friend_onlines: Vec<String> = onlines.iter().filter(|o| friend_ids.contains(o)).cloned().collect();
+
+    Ok(Json(friend_onlines))
 }
 
 #[get("/user/{email}")]

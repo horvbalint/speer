@@ -7,6 +7,8 @@ use crate::schemas::User;
 use crate::ws::message;
 use crate::ws::server;
 
+use super::Signal;
+
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
@@ -15,6 +17,16 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 struct PusherMessage {
     action: String,
     event: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SingalMessage {
+    action: String,
+    peer_data: String,
+    remote_id: String,
+    r#type: String,
+    data: Option<String>
 }
 
 #[derive(Debug)]
@@ -57,27 +69,23 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Connection {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             Ok(ws::Message::Pong(_)) => self.hb = Instant::now(),
             Ok(ws::Message::Text(text)) => {
-                let res = serde_json::from_str(&text);
-
-                match res {
-                    Ok(PusherMessage { action, event }) => {
-                        match action.as_str() {
-                            "subscribe" => {
-                                self.server.do_send(message::Subscribe{
-                                    event,
-                                    _id: self.user._id.to_string()
-                                })
+                match serde_json::from_str(&text) {
+                    Ok(PusherMessage { action, event }) => self.handle_pusher_msg(action, event),
+                    _ => {
+                        match serde_json::from_str(&text) {
+                            Ok(SingalMessage { action, peer_data, remote_id, r#type, data }) => {
+                                self.server.do_send(Signal {
+                                    _id: self.user._id.to_string(),
+                                    action,
+                                    peer_data: peer_data,
+                                    remote_id: remote_id,
+                                    r#type,
+                                    data,
+                                });
                             },
-                            "unsubscribe" => {
-                                self.server.do_send(message::Unsubscribe{
-                                    event,
-                                    _id: self.user._id.to_string()
-                                })
-                            },
-                            _ => {}
+                            _ => println!("MESSAGE UNRECOGNIZED: {}", text)
                         }
-                    },
-                    _ => {}
+                    }
                 }
             },
             Ok(ws::Message::Close(_)) => ctx.stop(),
@@ -113,5 +121,23 @@ impl Connection {
 
             ctx.ping(b"PING");
         });
-    } 
+    }
+
+    fn handle_pusher_msg(&self, action: String, event: String) {
+        match action.as_str() {
+            "subscribe" => {
+                self.server.do_send(message::Subscribe{
+                    event,
+                    _id: self.user._id.to_string()
+                })
+            },
+            "unsubscribe" => {
+                self.server.do_send(message::Unsubscribe{
+                    event,
+                    _id: self.user._id.to_string()
+                })
+            },
+            _ => {}
+        }
+    }
 }

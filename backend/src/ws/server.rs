@@ -1,7 +1,9 @@
 use crate::schemas::User;
-use super::{Send, Connect, Disconnect, Connection, Subscribe, Unsubscribe};
+use super::{Send, Connect, Disconnect, Connection, Subscribe, Unsubscribe, Signal, ConnectedIds};
 use actix::{prelude::{Actor, Context, Handler}, Addr};
-use std::collections::{HashMap};
+use mongodb::bson::oid::ObjectId;
+use serde_json::json;
+use std::{collections::{HashMap}, str::FromStr};
 
 #[derive(Debug)]
 pub struct Server {
@@ -21,11 +23,11 @@ impl Server {
         }
     }
 
-    fn send_msg(&self, id: String, msg: &str) {
-        if let Some(connection) = self.connections.get(&id) {
-            connection.1.do_send(Send(msg.to_owned()));
+    fn send_msg(&self, id: String, msg: String) {
+        if let Some((_, addr)) = self.connections.get(&id) {
+            addr.do_send(Send(msg));
         } else {
-            println!("Failed to send message \"{}\" to {}. Id not found.", msg, id);
+            println!("Failed to send message '{}' to {}. Id not found.", msg, id);
         }
     }
 
@@ -33,7 +35,13 @@ impl Server {
         if let Some(subscribed) = self.events.get(event) {
             for id in ids {
                 if let Some(addr) = subscribed.get(id) {
-                    addr.do_send(Send(format!("{{\"event\": \"{}\", \"data\": \"{}\"}}", event, data)))
+                    let message = json!({
+                        "event": event,
+                        "data": data,
+                        "msgType": "pusher"
+                    });
+
+                    addr.do_send(Send(message.to_string()));
                 }
             }
         }
@@ -76,6 +84,40 @@ impl Handler<Unsubscribe> for Server {
     }
 }
 
+impl Handler<Signal> for Server {
+    type Result = ();
+
+    fn handle(&mut self, msg: Signal, _: &mut Context<Self>) {
+        let used_fields = (
+            self.connections.get(&msg._id),
+            ObjectId::from_str(&msg.remote_id)
+        );
+
+        if let (Some((user, _)), Ok(remote_id)) = used_fields {
+            if user.friends.contains(&remote_id) {
+                let message = json!({
+                    "action": "signal",
+                    "peerData": msg.peer_data,
+                    "remoteId": msg._id,
+                    "type": msg.r#type,
+                    "data": msg.data,
+                    "msgType": "signal"
+                });
+
+                self.send_msg(msg.remote_id, message.to_string());
+            } else {
+                let message = json!({
+                    "error": "Not friend",
+                    "remoteId": msg.remote_id,
+                    "msgType": "signal"
+                });
+
+                self.send_msg(msg.remote_id, message.to_string());
+            }
+        };
+    }
+}
+
 impl Handler<Disconnect> for Server {
     type Result = ();
 
@@ -84,5 +126,21 @@ impl Handler<Disconnect> for Server {
             let friend_ids =  user.friends.iter().map(|id| id.to_string()).collect();
             self.emit_event("logout", &user._id.to_string(), &friend_ids);
         }
+
+        for (_, map) in self.events.iter_mut() {
+            map.remove(&msg._id);
+        }
+    }
+}
+
+impl Handler<ConnectedIds> for Server {
+    type Result = Option<Vec<String>>;
+
+    fn handle(&mut self, _: ConnectedIds, _: &mut Context<Self>) -> Self::Result {
+        Some(
+            self.connections.keys()
+                            .map(|key| key.clone())
+                            .collect()
+        )
     }
 }

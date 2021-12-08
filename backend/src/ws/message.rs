@@ -31,4 +31,19 @@ pub struct Unsubscribe {
 
 #[derive(Message, Debug)]
 #[rtype(result = "()")]
+pub struct Signal {
+  pub _id: String,
+  pub action: String,
+  pub peer_data: String,
+  pub remote_id: String,
+  pub r#type: String,
+  pub data: Option<String>,
+}
+
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
 pub struct Send(pub String);
+
+#[derive(Message, Debug)]
+#[rtype(result = "Option<Vec<String>>")]
+pub struct ConnectedIds;
