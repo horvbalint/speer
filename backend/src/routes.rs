@@ -1,7 +1,7 @@
 use actix::Addr;
-use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie};
+use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie, HttpRequest, HttpMessage};
 use futures::StreamExt;
-use mongodb::{Collection, Database, bson::{doc}, options::{FindOneOptions, FindOptions}};
+use mongodb::{Collection, Database, bson::doc};
 use serde::Deserialize;
 use jsonwebtoken::{encode, Header, EncodingKey};
 use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}};
@@ -14,6 +14,7 @@ use std::env;
 use crate::schemas::User;
 use crate::schemas::Confirm;
 use crate::jwt::JWT;
+use crate::utils;
 
 extern crate bcrypt;
 use bcrypt::verify;
@@ -44,7 +45,6 @@ pub async fn login_handler(
         return Err(ErrorUnauthorized("Password does not match"))
     }
 
-
     let current_utc = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs();
     let token_claims = JWT::new(user._id, current_utc + (24 * 60 * 60));
     let token = encode(&Header::default(), &token_claims, &EncodingKey::from_secret("secret".as_ref()))
@@ -65,19 +65,14 @@ pub async fn login_handler(
 }
 
 #[post("/logout")]
-pub async fn logout_handler() -> Result<impl Responder, Error> {
-    let cookie = Cookie::build("speer", "logged_out")
-        // .domain("www.rust-lang.org")
-        // .path("/")
-        // .secure(true)
-        .http_only(true)
-        .finish();
+pub async fn logout_handler(req: HttpRequest) -> Result<impl Responder, Error> {
+    let mut builder = HttpResponse::build(StatusCode::OK);
 
-    Ok(
-        HttpResponse::build(StatusCode::OK)
-        .cookie(cookie)
-        .body("Logged out")
-    )
+    if let Some(ref cookie) = req.cookie("speer") {
+        builder.del_cookie(cookie);
+    }
+
+    Ok(builder.finish())
 }
 
 #[post("/confirm/{token}")]
@@ -129,7 +124,12 @@ pub async fn resend_confirmation_handler(
     confirms_coll: Data<Collection<Confirm>>,
     users_coll: Data<Collection<User>>,
 ) -> Result<impl Responder, Error> {
-    let filter = doc! {"email": email, "confirmed": false, "deleted": false};
+    let filter = doc! {
+        "email": email,
+        "confirmed": false,
+        "deleted": false
+    };
+    
     let user = users_coll.find_one(filter, None).await
         .or(Err(ErrorBadRequest("Invalid email")))?
         .ok_or(ErrorBadRequest("Invalid email"))?;
@@ -157,7 +157,7 @@ pub async fn avatar_handler(
         .ok_or(ErrorBadRequest("No avatar provided"))?;
 
     let extension = uploaded_file.original_file_name().and_then(|name| {name.split('.').next_back()}).unwrap_or("avatar");
-    let file_name = crate::utils::generate_random_string(32);
+    let file_name = utils::generate_random_string(32);
     let full_file_name = format!("{}.{}", file_name, extension);
 
     let path = PathBuf::from(format!("{}/{}", files_path, full_file_name));
@@ -193,16 +193,14 @@ pub async fn me_handler(
     db: Data<Database>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    let options = FindOneOptions::builder()
-        .projection(doc! {
-            "password": 0,
-            "admin": 0,
-        })
-        .build();
+    let options = utils::create_projection(doc! {
+        "password": 0,
+        "admin": 0,
+    });
 
     let filter = doc! {"_id": user._id};
 
-    let user = db.collection("users").find_one(filter, options).await
+    let user = db.collection("users").find_one(filter, Some(options)).await
         .or(Err(ErrorInternalServerError("")))?
         .ok_or(ErrorBadRequest(""))?;
 
@@ -224,33 +222,47 @@ pub async fn onlines_handler(
     Ok(Json(friend_onlines))
 }
 
+#[get("/online/{id}")]
+pub async fn online_handler(
+    Path(id): Path<String>,
+    ws_addr: Data<Addr<Server>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    if !user.friends.iter().any(|f| f.to_string() == id) {
+        return Err(ErrorForbidden("Not a friend"));
+    }
+
+    let onlines = ws_addr.send(ConnectedIds).await
+        .or(Err(ErrorInternalServerError("")))?
+        .ok_or(ErrorInternalServerError(""))?;
+
+    Ok(Json(onlines.contains(&id)))
+}
+
 #[get("/user/{email}")]
 pub async fn user_by_email_handler(
     Path(email): Path<String>,
-    users_coll: Data<Collection<User>>,
+    db: Data<Database>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    let options = FindOneOptions::builder()
-        .projection(doc! {
-            "username": 1,
-            "email": 1,
-            "avatar": 1
-        })
-        .build();
+    let options = utils::create_projection(doc!{
+        "username": 1,
+        "email": 1,
+        "avatar": 1
+    });
 
     let filter = doc! {
-        "email": &email,
+        "email": email,
         "deleted": false,
         "confirmed": true,
         "$and": [
-            doc!{"_id": doc!{"$nin": user.friends }},
-            doc!{"_id": doc!{"$ne": user._id}},
+            {"_id": {"$nin": user.friends}},
+            {"_id": {"$ne": user._id}},
         ]
     };
 
-    let user = users_coll.find_one(filter, options).await
-        .or(Err(ErrorInternalServerError("")))?
-        .ok_or(ErrorBadRequest(format!("No user found with email: {}", email)))?;
+    let user = db.collection("users").find_one(filter, Some(options)).await
+        .or_else(|err| {println!("{}", err); Err(ErrorInternalServerError(""))})?;
 
     Ok(Json(user))
 }
@@ -260,16 +272,18 @@ pub async fn friends_handler(
     db: Data<Database>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    let filter = doc! {"deleted": false, "confirmed": true, "_id": {"$in": user.friends}};
-    let options = FindOptions::builder()
-        .projection(doc! {
-            "username": 1,
-            "email": 1,
-            "avatar": 1,
-        })
-        .build();
+    let filter = doc! {
+        "deleted": false,
+        "confirmed": true,
+        "_id": {"$in": user.friends}
+    };
+    let options = utils::create_projection(doc!{
+        "username": 1,
+        "email": 1,
+        "avatar": 1
+    }).into();
 
-    let mut result = db.collection("users").find(filter, options).await
+    let mut result = db.collection("users").find(filter, Some(options)).await
         .or(Err(ErrorInternalServerError("")))?;
 
     let mut users = vec![];

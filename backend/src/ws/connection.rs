@@ -14,12 +14,6 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 #[derive(Deserialize)]
-struct PusherMessage {
-    action: String,
-    event: String,
-}
-
-#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct SingalMessage {
     action: String,
@@ -27,6 +21,19 @@ struct SingalMessage {
     remote_id: String,
     r#type: String,
     data: Option<String>
+}
+
+#[derive(Deserialize)]
+struct PusherMessage {
+    action: String,
+    event: String,
+}
+
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum Message {
+    Signal(SingalMessage),
+    Pusher(PusherMessage),
 }
 
 #[derive(Debug)]
@@ -70,22 +77,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Connection {
             Ok(ws::Message::Pong(_)) => self.hb = Instant::now(),
             Ok(ws::Message::Text(text)) => {
                 match serde_json::from_str(&text) {
-                    Ok(PusherMessage { action, event }) => self.handle_pusher_msg(action, event),
-                    _ => {
-                        match serde_json::from_str(&text) {
-                            Ok(SingalMessage { action, peer_data, remote_id, r#type, data }) => {
-                                self.server.do_send(Signal {
-                                    _id: self.user._id.to_string(),
-                                    action,
-                                    peer_data: peer_data,
-                                    remote_id: remote_id,
-                                    r#type,
-                                    data,
-                                });
-                            },
-                            _ => println!("MESSAGE UNRECOGNIZED: {}", text)
-                        }
-                    }
+                    Ok(Message::Signal(msg)) => self.handle_signal_msg(msg),
+                    Ok(Message::Pusher(msg)) => self.handle_pusher_msg(msg),
+                    _ => {}
                 }
             },
             Ok(ws::Message::Close(_)) => ctx.stop(),
@@ -123,21 +117,32 @@ impl Connection {
         });
     }
 
-    fn handle_pusher_msg(&self, action: String, event: String) {
-        match action.as_str() {
+    fn handle_pusher_msg(&self, msg: PusherMessage) {
+        match msg.action.as_str() {
             "subscribe" => {
                 self.server.do_send(message::Subscribe{
-                    event,
+                    event: msg.event,
                     _id: self.user._id.to_string()
                 })
             },
             "unsubscribe" => {
                 self.server.do_send(message::Unsubscribe{
-                    event,
+                    event: msg.event,
                     _id: self.user._id.to_string()
                 })
             },
             _ => {}
         }
+    }
+
+    fn handle_signal_msg(&self, msg: SingalMessage) {
+        self.server.do_send(Signal {
+            _id: self.user._id.to_string(),
+            action: msg.action,
+            peer_data: msg.peer_data,
+            remote_id: msg.remote_id,
+            r#type: msg.r#type,
+            data: msg.data,
+        });
     }
 }
