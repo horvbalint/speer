@@ -1,4 +1,12 @@
 {
+  "1.8.15": {
+    "title": "Multi-line support",
+    "changes": [
+      "Added support for multi-line messages. Finally."
+    ],
+    "notes": [],
+    "type": "fix"
+  },
   "1.8.14": {
     "title": "Take it easy",
     "changes": [
