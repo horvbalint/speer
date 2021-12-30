@@ -74,8 +74,7 @@
         :title="formatTimeStamp(message.timeStamp)"
         @click="handleMessageClick(message)"
       >
-        <p>
-          {{message.message}}
+        <p>{{message.message}}
           <i v-if="message.call" class="fas fa-phone"/>
           <i v-else-if="message.file" class="fas fa-file"/>
         </p>
@@ -83,7 +82,7 @@
     </div>
 
     <div class="bottom">
-      <input type="text" v-model="message" @keyup.enter="send()" placeholder="Type here..." autocomplete="off">
+      <textarea v-model="message" @keydown.enter.exact.prevent="send()" placeholder="Type here..." autocomplete="off"/>
       <input type="file" multiple hidden ref="file" @change="sendFiles()">
       
       <div class="icons">
@@ -435,6 +434,7 @@ export default {
   margin-left: 10px;
 }
 .message p {
+  white-space: pre-line;
   padding: 5px 15px 5px 20px;
   font-size: var(--p-size);
   user-select: text;
@@ -468,12 +468,13 @@ export default {
   margin: 10px 20px 5px;
   overflow: hidden;
 }
-.bottom input {
+.bottom textarea {
   width: 100%;
   height: 45px;
-  padding-left: 15px;
+  padding: 12px 0 12px 20px;
   border: none;
   font-size: 16px;
+  resize: none;
 }
 .icons {
   display: flex;
