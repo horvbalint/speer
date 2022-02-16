@@ -3,6 +3,7 @@ backend/files/*
 backend/target
 backend/Cargo.lock
 backend/config.json
+backend/.env
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Node template

@@ -40,9 +40,27 @@ impl FromRequest for User {
         let db = req.app_data::<Data<Database>>().unwrap().clone();
 
         Box::pin(async move {
-            let collection = db.collection_with_type::<User>("users"); 
+            let collection = db.collection::<User>("users"); 
             process_req_auth_data(collection, cookie).await
         })
+    }
+}
+
+impl Default for User {
+    fn default() -> Self {
+        User {
+            _id: ObjectId::new(),
+            email: "".to_string(),
+            password: "".to_string(),
+            username: "".to_string(),
+            avatar: "avatar.jpg".to_string(),
+            requests: vec![],
+            friends: vec![],
+            devices: vec![],
+            confirmed: false,
+            deleted: false,
+            admin: false,
+        }
     }
 }
 
@@ -53,7 +71,7 @@ async fn process_req_auth_data(collection: Collection<User>, cookie: Option<Cook
     let decoded_token = decode::<JWT>(&cookie.value(), &DecodingKey::from_secret("secret".as_ref()), &Validation::default())
         .or(Err(ErrorUnauthorized("Token invalid")))?;
 
-    let id = ObjectId::with_string(decoded_token.claims.id.as_str())
+    let id = ObjectId::parse_str(decoded_token.claims.id.as_str())
         .or(Err(ErrorUnauthorized("You are not logged in")))?;
 
     collection.find_one(doc! {"_id": id}, None).await

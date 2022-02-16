@@ -1,53 +1,107 @@
 use actix::Addr;
 use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie, HttpRequest, HttpMessage};
-use futures::StreamExt;
-use mongodb::{Collection, Database, bson::doc};
+use futures::TryStreamExt;
+use mongodb::{Collection, Database, bson::{doc, Document, oid::ObjectId}};
 use serde::Deserialize;
 use jsonwebtoken::{encode, Header, EncodingKey};
 use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}};
 use std::path::PathBuf;
 use actix_files::NamedFile;
 use image::imageops::FilterType;
-use crate::{CurrDir, ws::{Server, ConnectedIds}};
-use std::env;
+use crate::{CurrDir, ws::{Server, ConnectedIds}, EnvVars};
 
 use crate::schemas::User;
+use crate::mail;
 use crate::schemas::Confirm;
 use crate::jwt::JWT;
 use crate::utils;
 
 extern crate bcrypt;
-use bcrypt::verify;
+use bcrypt::{verify, hash};
 
 extern crate image;
 
 #[derive(Deserialize)]
-pub struct LoginCredentials {
+pub struct LoginBody {
     email: String,
     password: String
 }
 
+#[derive(Deserialize)]
+pub struct RegisterBody {
+    email: String,
+    username: String,
+    password: String
+}
+
+#[post("/register")]
+pub async fn register_handler(
+    body: Json<RegisterBody>,
+    users_coll: Data<Collection<User>>,
+    confirms_coll: Data<Collection<Confirm>>,
+    env_vars: Data<EnvVars>,
+) -> Result<impl Responder, Error> {
+    let filter = doc!{"email": &body.email};
+    let user_exists = users_coll.find_one(filter, None).await
+        .or(Err(ErrorInternalServerError("")))?
+        .is_some();
+    if user_exists {return Err(ErrorBadRequest("Email in use"));}
+
+    let password = hash(&body.password, 10)
+        .or(Err(ErrorInternalServerError("")))?;
+
+    let user = User {
+        email: body.email.to_string(),
+        username: body.username.to_string(),
+        password: password.to_string(),
+        ..Default::default()
+    };
+    let user_id = users_coll.insert_one(user, None).await
+        .or(Err(ErrorInternalServerError("Failed to create user")))?
+        .inserted_id
+        .as_object_id()
+        .ok_or(ErrorInternalServerError(""))?
+        .clone();
+    
+    let token = encode(&Header::default(), &body.email, &EncodingKey::from_secret(env_vars.confirm_secret.as_ref()))
+        .or(Err(ErrorInternalServerError("")))?;
+    let confirm = Confirm {
+        _id: ObjectId::new(),
+        user: user_id.clone(),
+        token: token.clone(),
+    };
+    confirms_coll.insert_one(confirm, None).await
+        .or(Err(ErrorInternalServerError("Failed to create user")))?;
+
+
+    mail::send_confirmation(&body.username, &body.email, &token, &env_vars).await
+        .or(Err(ErrorInternalServerError("Failed to send confirmation email")))?;
+
+    Ok("")
+}
+
 #[post("/login")]
 pub async fn login_handler(
-    credentials: Json<LoginCredentials>,
-    users_coll: Data<Collection<User>>
+    credentials: Json<LoginBody>,
+    users_coll: Data<Collection<User>>,
+    env_vars: Data<EnvVars>
 ) -> Result<impl Responder, Error> {
-    let filter = doc! {"email": &credentials.email};
+    let filter = doc!{"email": &credentials.email};
 
     let user = users_coll.find_one(filter, None).await
-        .or(Err(ErrorInternalServerError("User does not exist")))?
-        .ok_or(ErrorInternalServerError("ITT ITT"))?;
+        .or(Err(ErrorInternalServerError("Incorrect credentials")))?
+        .ok_or(ErrorInternalServerError("Incorrect credentials"))?;
 
-    let verify = verify(&credentials.password, user.password.as_str())
+    let verified = verify(&credentials.password, user.password.as_str())
         .or(Err(ErrorUnauthorized("Password does not match")))?;
 
-    if !verify {
-        return Err(ErrorUnauthorized("Password does not match"))
-    }
+    if !verified { return Err(ErrorUnauthorized("Password does not match")) }
+    if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }
+    if !user.confirmed { return Err(ErrorUnauthorized("Email not confirmed")) }
 
     let current_utc = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs();
     let token_claims = JWT::new(user._id, current_utc + (24 * 60 * 60));
-    let token = encode(&Header::default(), &token_claims, &EncodingKey::from_secret("secret".as_ref()))
+    let token = encode(&Header::default(), &token_claims, &EncodingKey::from_secret(env_vars.cookie_secret.as_ref()))
         .or(Err(ErrorInternalServerError("")))?;
 
     let cookie = Cookie::build("speer", token)
@@ -81,17 +135,17 @@ pub async fn confirm_handler(
     confirms_coll: Data<Collection<Confirm>>,
     uesers_coll: Data<Collection<User>>,
 ) -> Result<impl Responder, Error> {
-    let filter = doc! {"token": token};
+    let filter = doc!{"token": token};
     let confirm = confirms_coll.find_one(filter, None).await
         .or(Err(ErrorInternalServerError("Invalid token")))?
         .ok_or(ErrorInternalServerError("Invalid token"))?;
 
-    let filter = doc! {"_id": confirm.user};
-    let update = doc! {"$set": {"confirmed": true}};
+    let filter = doc!{"_id": confirm.user};
+    let update = doc!{"$set": {"confirmed": true}};
     uesers_coll.update_one(filter, update, None).await
         .or(Err(ErrorInternalServerError("")))?;
 
-    let filter = doc! {"_id": confirm._id};
+    let filter = doc!{"_id": confirm._id};
     confirms_coll.delete_one(filter, None).await.ok();
 
     Ok("ok")
@@ -103,16 +157,16 @@ pub async fn cancel_handler(
     confirms_coll: Data<Collection<Confirm>>,
     users_coll: Data<Collection<User>>,
 ) -> Result<impl Responder, Error> {
-    let filter = doc! {"token": token};
+    let filter = doc!{"token": token};
     let confirm = confirms_coll.find_one(filter, None).await
         .or(Err(ErrorInternalServerError("Invalid token")))?
         .ok_or(ErrorInternalServerError("Invalid token"))?;
 
-    let filter = doc! {"_id": confirm.user, "confirmed": false};
+    let filter = doc!{"_id": confirm.user, "confirmed": false};
     users_coll.delete_one(filter, None).await
         .or(Err(ErrorInternalServerError("Failed to cancel token")))?;
 
-    let filter = doc! {"_id": confirm._id};
+    let filter = doc!{"_id": confirm._id};
     confirms_coll.delete_one(filter, None).await.ok();
 
     Ok("ok")
@@ -123,8 +177,9 @@ pub async fn resend_confirmation_handler(
     Path(email): Path<String>,
     confirms_coll: Data<Collection<Confirm>>,
     users_coll: Data<Collection<User>>,
+    env_vars: Data<EnvVars>
 ) -> Result<impl Responder, Error> {
-    let filter = doc! {
+    let filter = doc!{
         "email": email,
         "confirmed": false,
         "deleted": false
@@ -134,12 +189,13 @@ pub async fn resend_confirmation_handler(
         .or(Err(ErrorBadRequest("Invalid email")))?
         .ok_or(ErrorBadRequest("Invalid email"))?;
     
-    let filter = doc! {"user": user._id};
+    let filter = doc!{"user": user._id};
     let confirm = confirms_coll.find_one(filter, None).await
         .or(Err(ErrorBadRequest("Failed to resend email")))?
         .ok_or(ErrorBadRequest("Failed to resend email"))?;
 
-    // TODO: Send mail
+    mail::send_confirmation(&user.username, &user.email, &confirm.token, &env_vars).await
+        .or(Err(ErrorInternalServerError("Failed to send confirmation email")))?;
 
     Ok("ok")
 }
@@ -174,8 +230,8 @@ pub async fn avatar_handler(
         })
         .or(Err(ErrorInternalServerError("")))?;
 
-    let filter = doc! {"_id": user._id};
-    let update = doc! {"$set": {"avatar": &full_file_name}};
+    let filter = doc!{"_id": user._id};
+    let update = doc!{"$set": {"avatar": &full_file_name}};
     users_coll.update_one(filter, update, None).await
         .or(Err(ErrorInternalServerError("Could not update user profile")))?;
         
@@ -193,14 +249,14 @@ pub async fn me_handler(
     db: Data<Database>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    let options = utils::create_projection(doc! {
+    let options = utils::create_projection(doc!{
         "password": 0,
         "admin": 0,
     });
 
-    let filter = doc! {"_id": user._id};
+    let filter = doc!{"_id": user._id};
 
-    let user = db.collection("users").find_one(filter, Some(options)).await
+    let user = db.collection::<Document>("users").find_one(filter, Some(options)).await
         .or(Err(ErrorInternalServerError("")))?
         .ok_or(ErrorBadRequest(""))?;
 
@@ -251,7 +307,7 @@ pub async fn user_by_email_handler(
         "avatar": 1
     });
 
-    let filter = doc! {
+    let filter = doc!{
         "email": email,
         "deleted": false,
         "confirmed": true,
@@ -261,7 +317,7 @@ pub async fn user_by_email_handler(
         ]
     };
 
-    let user = db.collection("users").find_one(filter, Some(options)).await
+    let user = db.collection::<Document>("users").find_one(filter, Some(options)).await
         .or_else(|err| {println!("{}", err); Err(ErrorInternalServerError(""))})?;
 
     Ok(Json(user))
@@ -272,7 +328,7 @@ pub async fn friends_handler(
     db: Data<Database>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    let filter = doc! {
+    let filter = doc!{
         "deleted": false,
         "confirmed": true,
         "_id": {"$in": user.friends}
@@ -283,13 +339,11 @@ pub async fn friends_handler(
         "avatar": 1
     }).into();
 
-    let mut result = db.collection("users").find(filter, Some(options)).await
+    let result = db.collection::<Document>("users").find(filter, Some(options)).await
         .or(Err(ErrorInternalServerError("")))?;
 
-    let mut users = vec![];
-    while let Some(Ok(doc)) = result.next().await {
-        users.push(doc);
-    }
+    let users: Vec<Document> = result.try_collect().await
+        .or(Err(ErrorInternalServerError("")))?;
 
     Ok(Json(users))
 }
@@ -297,10 +351,10 @@ pub async fn friends_handler(
 #[get("/static/{file}")]
 pub async fn files_handler(
     Path(file): Path<String>,
+    curr_dir : Data<CurrDir>,
     _user: User,
 ) -> Result<impl Responder, Error> {
-    let mut path = env::current_dir()?;
-    path.push(PathBuf::from(format!("files/{}", file)));
+    let path = PathBuf::from(format!("{}/files/{}", curr_dir.path, file));
     
     let res = NamedFile::open(path)
         .or(Err(ErrorNotFound(file)))?;
