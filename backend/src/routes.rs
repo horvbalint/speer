@@ -4,11 +4,12 @@ use futures::TryStreamExt;
 use mongodb::{Collection, Database, bson::{doc, Document, oid::ObjectId}};
 use serde::Deserialize;
 use jsonwebtoken::{encode, Header, EncodingKey};
+use serde_json::json;
 use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}};
 use std::path::PathBuf;
 use actix_files::NamedFile;
 use image::imageops::FilterType;
-use crate::{CurrDir, ws::{Server, ConnectedIds}, EnvVars};
+use crate::{CurrDir, ws::{Server, ConnectedIds, Dispatch}, EnvVars};
 
 use crate::schemas::User;
 use crate::mail;
@@ -99,7 +100,7 @@ pub async fn login_handler(
     if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }
     if !user.confirmed { return Err(ErrorUnauthorized("Email not confirmed")) }
 
-    let current_utc = SystemTime::now().duration_since(UNIX_EPOCH).expect("Time went backwards").as_secs();
+    let current_utc = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
     let token_claims = JWT::new(user._id, current_utc + (24 * 60 * 60));
     let token = encode(&Header::default(), &token_claims, &EncodingKey::from_secret(env_vars.cookie_secret.as_ref()))
         .or(Err(ErrorInternalServerError("")))?;
@@ -346,6 +347,52 @@ pub async fn friends_handler(
         .or(Err(ErrorInternalServerError("")))?;
 
     Ok(Json(users))
+}
+
+#[post("/request/{id}")]
+pub async fn request_id(
+    Path(id): Path<String>,
+    users_coll: Data<Collection<User>>,
+    ws_addr: Data<Addr<Server>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    if user._id.to_string() == id {
+        return Err(ErrorBadRequest("Make peace with yourself"))
+    }
+
+    let filter = doc! {
+        "deleted": false,
+        "confirmed": true,
+        "_id": id
+    };
+
+    let req_user = users_coll.find_one(filter, None).await
+        .or(Err(ErrorInternalServerError("")))?
+        .ok_or(ErrorBadRequest("User not found"))?;
+
+    if req_user.friends.contains(&user._id) {
+        return Err(ErrorBadRequest("Already friend"))
+    }
+
+    let filter = doc!{"_id": &req_user._id};
+    let update = doc!{"$addToSet": {"requests": user._id}};
+    users_coll.update_one(filter, update, None).await
+        .or(Err(ErrorInternalServerError("")))?;
+
+    let event = Dispatch {
+        event: "request".to_string(),
+        payload: json!({
+            "_id": user._id.to_string(),
+            "username": user.username,
+            "email": user.email,
+            "avatar": user.avatar,
+        }).to_string(),
+        filter: vec![req_user._id.to_string()]
+    };
+    
+    ws_addr.send(event).await.ok();
+        
+    Ok("")
 }
 
 #[get("/static/{file}")]

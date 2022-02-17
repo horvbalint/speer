@@ -5,7 +5,7 @@ use mongodb::{Collection, Database, bson::{doc, oid::ObjectId}};
 use serde::{Serialize, Deserialize};
 use jsonwebtoken::{decode, Validation, DecodingKey};
 
-use crate::jwt::JWT;
+use crate::{jwt::JWT, EnvVars};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Device {
@@ -36,12 +36,14 @@ impl FromRequest for User {
     type Config = ();
 
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
+        let env_vars = req.app_data::<Data<EnvVars>>().unwrap();
+        let cookie_secret = env_vars.cookie_secret.clone();
         let cookie = req.cookie("speer");
         let db = req.app_data::<Data<Database>>().unwrap().clone();
 
         Box::pin(async move {
             let collection = db.collection::<User>("users"); 
-            process_req_auth_data(collection, cookie).await
+            process_req_auth_data(collection, cookie, cookie_secret).await
         })
     }
 }
@@ -64,11 +66,11 @@ impl Default for User {
     }
 }
 
-async fn process_req_auth_data(collection: Collection<User>, cookie: Option<Cookie<'_>>) -> Result<User, Error> {
+async fn process_req_auth_data(collection: Collection<User>, cookie: Option<Cookie<'_>>, cookie_secret: String) -> Result<User, Error> {
     let cookie = cookie
         .ok_or(ErrorUnauthorized("You are not logged in"))?;
 
-    let decoded_token = decode::<JWT>(&cookie.value(), &DecodingKey::from_secret("secret".as_ref()), &Validation::default())
+    let decoded_token = decode::<JWT>(&cookie.value(), &DecodingKey::from_secret(cookie_secret.as_ref()), &Validation::default())
         .or(Err(ErrorUnauthorized("Token invalid")))?;
 
     let id = ObjectId::parse_str(decoded_token.claims.id.as_str())

@@ -47,3 +47,11 @@ pub struct Send(pub String);
 #[derive(Message, Debug)]
 #[rtype(result = "Option<Vec<String>>")]
 pub struct ConnectedIds;
+
+#[derive(Message, Debug)]
+#[rtype(result = "()")]
+pub struct Dispatch {
+  pub event: String,
+  pub payload: String,
+  pub filter: Vec<String>,
+}

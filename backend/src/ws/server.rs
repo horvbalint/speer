@@ -1,5 +1,5 @@
 use crate::schemas::User;
-use super::{Send, Connect, Disconnect, Connection, Subscribe, Unsubscribe, Signal, ConnectedIds};
+use super::{Send, Dispatch, Connect, Disconnect, Connection, Subscribe, Unsubscribe, Signal, ConnectedIds};
 use actix::{prelude::{Actor, Context, Handler}, Addr};
 use mongodb::bson::oid::ObjectId;
 use serde_json::json;
@@ -142,5 +142,13 @@ impl Handler<ConnectedIds> for Server {
                             .map(|key| key.clone())
                             .collect()
         )
+    }
+}
+
+impl Handler<Dispatch> for Server {
+    type Result = ();
+
+    fn handle(&mut self, msg: Dispatch, _: &mut Context<Self>) {
+        self.emit_event(&msg.event, &msg.payload, &msg.filter);
     }
 }
