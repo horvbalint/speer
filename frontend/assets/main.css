@@ -9,7 +9,7 @@
   --yellow: #ffa600;
   --grey: #989aaf;
   
-  --speed-normal: .3s;
+  --speed-normal: .2s;
   --speed-fast: .1s;
   --shadow-color: rgba(0, 0, 0, 0.6);
 
@@ -83,10 +83,6 @@ h1, h2, h3, h4, h5, h6, p, div, pre, input, textarea, button {
 .layout-enter, 
 .layout-leave-active {
   opacity: 0
-}
-
-.pop-enter-active, .pop-leave-active {
-  transition: var(--speed-normal);
 }
 
 @media screen and (min-width: 600px) {
