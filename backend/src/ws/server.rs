@@ -2,6 +2,7 @@ use crate::schemas::User;
 use super::{Send, Dispatch, Connect, Disconnect, Connection, Subscribe, Unsubscribe, Signal, ConnectedIds};
 use actix::{prelude::{Actor, Context, Handler}, Addr};
 use mongodb::bson::oid::ObjectId;
+use serde::Serialize;
 use serde_json::json;
 use std::{collections::{HashMap}, str::FromStr};
 
@@ -31,7 +32,7 @@ impl Server {
         }
     }
 
-    fn emit_event(&self, event: &str, data: &str, ids: &Vec<String>) {
+    fn emit_event<T: Serialize>(&self, event: &str, data: Box<T>, ids: &Vec<String>) {
         if let Some(subscribed) = self.events.get(event) {
             for id in ids {
                 if let Some(addr) = subscribed.get(id) {
@@ -53,7 +54,7 @@ impl Handler<Connect> for Server {
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) {
         let friend_ids =  msg.user.friends.iter().map(|id| id.to_string()).collect();
-        self.emit_event("login", &msg.user._id.to_string(), &friend_ids);
+        self.emit_event("login", Box::new(&msg.user._id.to_string()), &friend_ids);
 
 
         self.connections.insert(msg.user._id.to_string(), (msg.user, msg.addr));
@@ -124,7 +125,7 @@ impl Handler<Disconnect> for Server {
     fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
         if let Some((user, _)) = self.connections.remove(&msg._id) {
             let friend_ids =  user.friends.iter().map(|id| id.to_string()).collect();
-            self.emit_event("logout", &user._id.to_string(), &friend_ids);
+            self.emit_event("logout", Box::new(&user._id.to_string()), &friend_ids);
         }
 
         for (_, map) in self.events.iter_mut() {
@@ -149,6 +150,6 @@ impl Handler<Dispatch> for Server {
     type Result = ();
 
     fn handle(&mut self, msg: Dispatch, _: &mut Context<Self>) {
-        self.emit_event(&msg.event, &msg.payload, &msg.filter);
+        self.emit_event(&msg.event, Box::new(&msg.payload), &msg.filter);
     }
 }

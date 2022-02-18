@@ -16,7 +16,7 @@ export default ({$axios, redirect, store}) => {
     ])
     .then( ([user, friends]) => {
       store.dispatch('setUser', user)
-      store.dispatch('setFriends', friends.map(f => ({...f, _id: f._id.$oid})))
+      store.dispatch('setFriends', friends)
       store.dispatch('setPusher', pusher)
       store.dispatch('setPeerClient', peerClient)
 

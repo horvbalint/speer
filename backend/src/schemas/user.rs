@@ -1,7 +1,7 @@
 use std::pin::Pin;
 use actix_web::{Error, FromRequest, HttpMessage, HttpRequest, cookie::Cookie, dev, error::ErrorUnauthorized, web::Data};
 use futures::{Future};
-use mongodb::{Collection, Database, bson::{doc, oid::ObjectId}};
+use mongodb::{Collection, Database, bson::{doc, oid::ObjectId, serde_helpers::serialize_object_id_as_hex_string}};
 use serde::{Serialize, Deserialize};
 use jsonwebtoken::{decode, Validation, DecodingKey};
 
@@ -17,6 +17,7 @@ pub struct Device {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
+    #[serde(serialize_with = "serialize_object_id_as_hex_string")]
     pub _id: ObjectId,
     pub email: String,
     pub password: String,
@@ -79,4 +80,27 @@ async fn process_req_auth_data(collection: Collection<User>, cookie: Option<Cook
     collection.find_one(doc! {"_id": id}, None).await
         .or(Err(ErrorUnauthorized("You are not logged in")))?
         .ok_or(ErrorUnauthorized("You are not logged in"))
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MinimalUser {
+    #[serde(serialize_with = "serialize_object_id_as_hex_string")]
+    pub _id: ObjectId,
+    pub email: String,
+    pub username: String,
+    pub avatar: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct MeUser {
+    #[serde(serialize_with = "serialize_object_id_as_hex_string")]
+    pub _id: ObjectId,
+    pub email: String,
+    pub username: String,
+    pub avatar: String,
+    pub requests: Vec<ObjectId>,
+    pub friends: Vec<ObjectId>,
+    pub devices: Vec<Device>,
+    pub confirmed: bool,
+    pub deleted: bool,
 }

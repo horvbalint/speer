@@ -1,4 +1,5 @@
 use actix::{prelude::Message, Addr};
+use mongodb::bson::Document;
 use crate::schemas::User;
 use super::Connection;
 
@@ -52,6 +53,6 @@ pub struct ConnectedIds;
 #[rtype(result = "()")]
 pub struct Dispatch {
   pub event: String,
-  pub payload: String,
+  pub payload: Document,
   pub filter: Vec<String>,
 }

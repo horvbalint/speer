@@ -6,8 +6,9 @@ use actix_cors::Cors;
 use actix_web::{web, App, FromRequest, HttpServer, middleware::Logger};
 use mongodb::{Client, options::ClientOptions};
 use serde::Deserialize;
+use serde_json::{Map, Value};
 use env_logger;
-use std::env;
+use std::{env, fs};
 
 mod schemas;
 mod routes;
@@ -31,7 +32,6 @@ pub struct EnvVars {
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
-    env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::init();
 
     let client_options = ClientOptions::parse("mongodb://localhost:27017/?retryWrites=false").await.unwrap();
@@ -46,18 +46,24 @@ async fn main() -> std::io::Result<()> {
             .allow_any_method()
             .allow_any_header()
             .supports_credentials();
-
+        let curr_dir = CurrDir {
+            path: env::current_dir().unwrap().to_str().unwrap().to_string()
+        };
+        let limit_file_size = awmp::Parts::configure(|cfg| cfg.with_file_limit(20_000_000));
+        let json_string = fs::read_to_string("changelog.json").unwrap();
+        let changelog = serde_json::from_str::<Map<String, Value>>(&json_string).unwrap();
+        
         App::new()
+            .data(limit_file_size)
             .data(env_vars)
             .data(client.clone())
             .data(db.clone())
+            .data(db.collection::<schemas::MinimalUser>("users"))
             .data(db.collection::<schemas::User>("users"))
             .data(db.collection::<schemas::Confirm>("confirms"))
-            .data(CurrDir {
-                path: env::current_dir().unwrap().to_str().unwrap().to_string(),
-            })
-            .data(awmp::Parts::configure(|cfg| cfg.with_file_limit(20_000_000)))
+            .data(curr_dir)
             .data(ws_server.clone())
+            .data(changelog)
             .wrap(cors)
             .wrap(Logger::default())
             .route("/ws/", web::get().to(ws::ws_route))
@@ -71,7 +77,15 @@ async fn main() -> std::io::Result<()> {
             .service(routes::user_by_email_handler)
             .service(routes::me_handler)
             .service(routes::onlines_handler)
+            .service(routes::online_handler)
             .service(routes::friends_handler)
+            .service(routes::request_id_handler)
+            .service(routes::request_handler)
+            .service(routes::accept_id_handler)
+            .service(routes::decline_id_handler)
+            .service(routes::changelog_version_handler)
+            .service(routes::changelog_handler)
+            .service(routes::breaking_version_handler)
             .service(routes::files_handler)
     })
         .bind("localhost:9001")?

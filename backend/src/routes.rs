@@ -4,14 +4,13 @@ use futures::TryStreamExt;
 use mongodb::{Collection, Database, bson::{doc, Document, oid::ObjectId}};
 use serde::Deserialize;
 use jsonwebtoken::{encode, Header, EncodingKey};
-use serde_json::json;
-use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}};
+use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}, str::FromStr, collections::HashMap};
 use std::path::PathBuf;
 use actix_files::NamedFile;
 use image::imageops::FilterType;
 use crate::{CurrDir, ws::{Server, ConnectedIds, Dispatch}, EnvVars};
 
-use crate::schemas::User;
+use crate::schemas::{User, MinimalUser, MeUser};
 use crate::mail;
 use crate::schemas::Confirm;
 use crate::jwt::JWT;
@@ -213,7 +212,7 @@ pub async fn avatar_handler(
     let uploaded_file = parts.files.take("avatar").pop()
         .ok_or(ErrorBadRequest("No avatar provided"))?;
 
-    let extension = uploaded_file.original_file_name().and_then(|name| {name.split('.').next_back()}).unwrap_or("avatar");
+    let extension = uploaded_file.original_file_name().and_then(|name| name.split('.').next_back()).unwrap_or("avatar");
     let file_name = utils::generate_random_string(32);
     let full_file_name = format!("{}.{}", file_name, extension);
 
@@ -250,14 +249,9 @@ pub async fn me_handler(
     db: Data<Database>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    let options = utils::create_projection(doc!{
-        "password": 0,
-        "admin": 0,
-    });
-
     let filter = doc!{"_id": user._id};
 
-    let user = db.collection::<Document>("users").find_one(filter, Some(options)).await
+    let user = db.collection::<MeUser>("users").find_one(filter, None).await
         .or(Err(ErrorInternalServerError("")))?
         .ok_or(ErrorBadRequest(""))?;
 
@@ -299,15 +293,9 @@ pub async fn online_handler(
 #[get("/user/{email}")]
 pub async fn user_by_email_handler(
     Path(email): Path<String>,
-    db: Data<Database>,
+    minimal_users_coll: Data<Collection<MinimalUser>>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    let options = utils::create_projection(doc!{
-        "username": 1,
-        "email": 1,
-        "avatar": 1
-    });
-
     let filter = doc!{
         "email": email,
         "deleted": false,
@@ -318,15 +306,15 @@ pub async fn user_by_email_handler(
         ]
     };
 
-    let user = db.collection::<Document>("users").find_one(filter, Some(options)).await
-        .or_else(|err| {println!("{}", err); Err(ErrorInternalServerError(""))})?;
+    let user = minimal_users_coll.find_one(filter, None).await
+       .or(Err(ErrorInternalServerError("")))?;
 
     Ok(Json(user))
 }
 
 #[get("/friends")]
 pub async fn friends_handler(
-    db: Data<Database>,
+    minimal_users_coll: Data<Collection<MinimalUser>>,
     user: User,
 ) -> Result<impl Responder, Error> {
     let filter = doc!{
@@ -334,29 +322,26 @@ pub async fn friends_handler(
         "confirmed": true,
         "_id": {"$in": user.friends}
     };
-    let options = utils::create_projection(doc!{
-        "username": 1,
-        "email": 1,
-        "avatar": 1
-    }).into();
 
-    let result = db.collection::<Document>("users").find(filter, Some(options)).await
-        .or(Err(ErrorInternalServerError("")))?;
-
-    let users: Vec<Document> = result.try_collect().await
+    let users: Vec<MinimalUser> = minimal_users_coll.find(filter, None).await
+        .or(Err(ErrorInternalServerError("")))?
+        .try_collect().await
         .or(Err(ErrorInternalServerError("")))?;
 
     Ok(Json(users))
 }
 
 #[post("/request/{id}")]
-pub async fn request_id(
+pub async fn request_id_handler(
     Path(id): Path<String>,
     users_coll: Data<Collection<User>>,
     ws_addr: Data<Addr<Server>>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    if user._id.to_string() == id {
+    let id = ObjectId::from_str(&id)
+        .or(Err(ErrorBadRequest("Not an id")))?;
+
+    if user._id == id {
         return Err(ErrorBadRequest("Make peace with yourself"))
     }
 
@@ -381,18 +366,154 @@ pub async fn request_id(
 
     let event = Dispatch {
         event: "request".to_string(),
-        payload: json!({
+        payload: doc!{
             "_id": user._id.to_string(),
             "username": user.username,
             "email": user.email,
             "avatar": user.avatar,
-        }).to_string(),
+        },
         filter: vec![req_user._id.to_string()]
     };
     
     ws_addr.send(event).await.ok();
         
     Ok("")
+}
+
+#[get("/request")]
+pub async fn request_handler(
+    db: Data<Database>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    let filter = doc! {
+        "deleted": false,
+        "confirmed": true,
+        "_id": {"$in": user.requests}
+    };
+
+
+    let req_users: Vec<MinimalUser> = db.collection::<MinimalUser>("users").find(filter, None).await
+        .or(Err(ErrorInternalServerError("")))?
+        .try_collect().await
+        .or(Err(ErrorInternalServerError("")))?;
+
+    Ok(Json(req_users))
+}
+
+#[post("/accept/{id}")]
+pub async fn accept_id_handler(
+    Path(id): Path<String>,
+    users_coll: Data<Collection<User>>,
+    ws_addr: Data<Addr<Server>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    let id = ObjectId::from_str(&id)
+        .or(Err(ErrorBadRequest("Not an id")))?;
+
+    if !user.requests.iter().any(|r| r == &id) {
+        return Err(ErrorBadRequest("Not in requests"));
+    }
+
+    let filter = doc! {"_id": user._id};
+    let update = doc! {
+        "$pull": {"requests": id},
+        "$addToSet": {"friends": id}
+    };
+    users_coll.update_one(filter, update, None).await
+        .or(Err(ErrorInternalServerError("")))?;
+
+
+    let filter = doc! {"_id": id};
+    let update = doc! {"$addToSet": {"friends": user._id}};
+    users_coll.update_one(filter, update, None).await
+        .or(Err(ErrorInternalServerError("")))?;
+
+    let event = Dispatch {
+        event: "friend".to_string(),
+        payload: doc!{
+            "_id": user._id.to_string(),
+            "username": user.username,
+            "email": user.email,
+            "avatar": user.avatar,
+        },
+        filter: vec![id.to_string()]
+    };
+    
+    ws_addr.send(event).await.ok();
+
+    // TODO: Push-notification
+
+    Ok("")
+}
+
+#[post("/decline/{id}")]
+pub async fn decline_id_handler(
+    Path(id): Path<String>,
+    users_coll: Data<Collection<User>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    let id = ObjectId::from_str(&id)
+        .or(Err(ErrorBadRequest("Not an id")))?;
+
+    if !user.requests.iter().any(|r| r == &id) {
+        return Err(ErrorBadRequest("Not in requests"));
+    }
+
+    let filter = doc! {"_id": user._id};
+    let update = doc! {"$pull": {"requests": id}};
+    users_coll.update_one(filter, update, None).await
+        .or(Err(ErrorInternalServerError("")))?;
+
+    Ok("")
+}
+
+#[get("/changelog/{version}")]
+pub async fn changelog_version_handler(
+    Path(version): Path<String>,
+    changelog: Data<serde_json::Map<String, serde_json::Value>>,
+    _user: User,
+) -> Result<impl Responder, Error> {
+    let log_for_version = changelog.get(&version);
+    if log_for_version.is_none() {
+        return Err(ErrorBadRequest("No such version"));
+    }
+
+    let new_versions = changelog.keys().take_while(|v| v != &&version);
+    let mut changes = serde_json::Map::<String, serde_json::Value>::new();
+
+    for v in new_versions {
+        changes.insert(v.clone(), changelog[v].clone());
+    }
+
+    Ok(Json(changes))
+}
+
+#[get("/changelog")]
+pub async fn changelog_handler(
+    changelog: Data<serde_json::Map<String, serde_json::Value>>,
+    _user: User,
+) -> Result<impl Responder, Error> {
+    let res = (**changelog).clone();
+
+    Ok(Json(res))
+}
+
+#[get("/breaking/{version}")]
+pub async fn breaking_version_handler(
+    Path(version): Path<String>,
+    changelog: Data<serde_json::Map<String, serde_json::Value>>,
+    _user: User,
+) -> Result<impl Responder, Error> {
+    let log_for_version = changelog.get(&version);
+    if log_for_version.is_none() {
+        return Err(ErrorBadRequest("No such version"));
+    }
+
+    let new_versions = changelog.keys()
+        .take_while(|v| v != &&version)
+        .any(|v| changelog[v]["type"] == "breaking");
+
+    Ok(Json(new_versions))
 }
 
 #[get("/static/{file}")]
