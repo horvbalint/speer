@@ -1,10 +1,10 @@
 use actix::Addr;
 use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie, HttpRequest, HttpMessage};
 use futures::TryStreamExt;
-use mongodb::{Collection, Database, bson::{doc, Document, oid::ObjectId}};
+use mongodb::{Collection, Database, bson::{doc, oid::ObjectId}};
 use serde::Deserialize;
 use jsonwebtoken::{encode, Header, EncodingKey};
-use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}, str::FromStr, collections::HashMap};
+use std::{fs::remove_file, time::{SystemTime, UNIX_EPOCH}, str::FromStr};
 use std::path::PathBuf;
 use actix_files::NamedFile;
 use image::imageops::FilterType;
@@ -105,9 +105,7 @@ pub async fn login_handler(
         .or(Err(ErrorInternalServerError("")))?;
 
     let cookie = Cookie::build("speer", token)
-        // .domain("www.rust-lang.org")
-        // .path("/")
-        // .secure(true)
+        .secure(true)
         .http_only(true)
         .finish();
 
@@ -267,8 +265,10 @@ pub async fn onlines_handler(
         .or(Err(ErrorInternalServerError("")))?
         .ok_or(ErrorInternalServerError(""))?;
 
-    let friend_ids: Vec<String> = user.friends.iter().map(|f| f.to_string()).collect();
-    let friend_onlines: Vec<String> = onlines.iter().filter(|o| friend_ids.contains(o)).cloned().collect();
+    let friend_onlines: Vec<String> = onlines.into_iter()
+        .filter(|id| user.friends.contains(id))
+        .map(|id| id.to_string())
+        .collect();
 
     Ok(Json(friend_onlines))
 }
@@ -287,7 +287,8 @@ pub async fn online_handler(
         .or(Err(ErrorInternalServerError("")))?
         .ok_or(ErrorInternalServerError(""))?;
 
-    Ok(Json(onlines.contains(&id)))
+    let is_online = onlines.iter().any(|o_id| o_id.to_string() == id);
+    Ok(Json(is_online))
 }
 
 #[get("/user/{email}")]
@@ -372,7 +373,7 @@ pub async fn request_id_handler(
             "email": user.email,
             "avatar": user.avatar,
         },
-        filter: vec![req_user._id.to_string()]
+        filter: vec![req_user._id]
     };
     
     ws_addr.send(event).await.ok();
@@ -436,7 +437,7 @@ pub async fn accept_id_handler(
             "email": user.email,
             "avatar": user.avatar,
         },
-        filter: vec![id.to_string()]
+        filter: vec![id]
     };
     
     ws_addr.send(event).await.ok();

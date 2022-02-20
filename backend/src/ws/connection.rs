@@ -1,6 +1,7 @@
 use std::{time::{Instant, Duration}};
 use actix::{Actor, StreamHandler, Running, Addr, AsyncContext, ActorContext, Handler};
 use actix_web_actors::ws;
+use mongodb::bson::oid::ObjectId;
 use serde::Deserialize;
 
 use crate::schemas::User;
@@ -18,7 +19,7 @@ const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 struct SingalMessage {
     action: String,
     peer_data: String,
-    remote_id: String,
+    remote_id: ObjectId,
     r#type: String,
     data: Option<String>
 }
@@ -57,7 +58,7 @@ impl Actor for Connection {
 
     fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
         self.server.do_send(message::Disconnect {
-            _id: self.user._id.to_string(),
+            _id: self.user._id,
         });
 
         ctx.close(None);
@@ -122,13 +123,13 @@ impl Connection {
             "subscribe" => {
                 self.server.do_send(message::Subscribe{
                     event: msg.event,
-                    _id: self.user._id.to_string()
+                    _id: self.user._id
                 })
             },
             "unsubscribe" => {
                 self.server.do_send(message::Unsubscribe{
                     event: msg.event,
-                    _id: self.user._id.to_string()
+                    _id: self.user._id
                 })
             },
             _ => {}
@@ -137,7 +138,7 @@ impl Connection {
 
     fn handle_signal_msg(&self, msg: SingalMessage) {
         self.server.do_send(Signal {
-            _id: self.user._id.to_string(),
+            _id: self.user._id,
             action: msg.action,
             peer_data: msg.peer_data,
             remote_id: msg.remote_id,
