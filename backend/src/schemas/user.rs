@@ -5,7 +5,7 @@ use mongodb::{Collection, Database, bson::{doc, oid::ObjectId, serde_helpers::se
 use serde::{Serialize, Deserialize};
 use jsonwebtoken::{decode, Validation, DecodingKey};
 
-use crate::{jwt::JWT, EnvVars};
+use crate::{jwt::Jwt, EnvVars};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Device {
@@ -69,17 +69,17 @@ impl Default for User {
 
 async fn process_req_auth_data(collection: Collection<User>, cookie: Option<Cookie<'_>>, cookie_secret: String) -> Result<User, Error> {
     let cookie = cookie
-        .ok_or(ErrorUnauthorized("You are not logged in"))?;
+        .ok_or_else(|| ErrorUnauthorized("You are not logged in"))?;
 
-    let decoded_token = decode::<JWT>(&cookie.value(), &DecodingKey::from_secret(cookie_secret.as_ref()), &Validation::default())
-        .or(Err(ErrorUnauthorized("Token invalid")))?;
+    let decoded_token = decode::<Jwt>(cookie.value(), &DecodingKey::from_secret(cookie_secret.as_ref()), &Validation::default())
+        .map_err(|_| ErrorUnauthorized("Token invalid"))?;
 
     let id = ObjectId::parse_str(decoded_token.claims.id.as_str())
-        .or(Err(ErrorUnauthorized("You are not logged in")))?;
+        .map_err(|_| ErrorUnauthorized("You are not logged in"))?;
 
     collection.find_one(doc! {"_id": id}, None).await
-        .or(Err(ErrorUnauthorized("You are not logged in")))?
-        .ok_or(ErrorUnauthorized("You are not logged in"))
+        .map_err(|_| ErrorUnauthorized("You are not logged in"))?
+        .ok_or_else(|| ErrorUnauthorized("You are not logged in"))
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

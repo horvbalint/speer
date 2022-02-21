@@ -5,7 +5,7 @@ use serde_json::json;
 use crate::EnvVars;
 
 #[cfg(debug_assertions)]
-pub async fn send_confirmation(_username: &str, _email: &str, token: &str, env_vars: &EnvVars) -> Result<(), String> {
+pub async fn send_confirmation(_username: &str, _email: &str, token: &str, _env_vars: &EnvVars) -> Result<(), String> {
   println!("CONFIRM REGISTRATION: \n http://localhost:9000/confirm?token={}", token);
   println!("CANCEL REGISTRATION: \n http://localhost:9000/cancel?token={}", token);
 
@@ -15,7 +15,7 @@ pub async fn send_confirmation(_username: &str, _email: &str, token: &str, env_v
 #[cfg(not(debug_assertions))]
 pub async fn send_confirmation(username: &str, email: &str, token: &str, env_vars: &EnvVars) -> Result<(), String> {
   let mut html = fs::read_to_string("emails/emailConfirmation.html")
-    .or(Err("Failed to open email template".to_string()))?;
+    .or_else(Err("Failed to open email template".to_string()))?;
 
   html = html.replace("{{CONFIRM_URL}}", format!("https://speer.fun/confirm?token={token}").as_str());
   html = html.replace("{{CANCEL_URL}}", format!("https://speer.fun/cancel?token={token}").as_str());

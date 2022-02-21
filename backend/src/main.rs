@@ -7,7 +7,7 @@ use actix_web::{web, App, FromRequest, HttpServer, middleware::Logger};
 use mongodb::{Client, options::ClientOptions};
 use serde::Deserialize;
 use serde_json::{Map, Value};
-use env_logger;
+
 use std::{env, fs};
 
 mod schemas;

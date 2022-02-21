@@ -1,4 +1,3 @@
-use mongodb::{bson::Document, options::FindOneOptions};
 use rand::{distributions::Alphanumeric, Rng};
 
 pub fn generate_random_string(len: usize) -> String {
@@ -8,10 +7,4 @@ pub fn generate_random_string(len: usize) -> String {
         .map(char::from)
         .collect::<String>()
         .to_lowercase()
-}
-
-pub fn create_projection(projection: Document) -> FindOneOptions {
-    FindOneOptions::builder() 
-                    .projection(projection)
-                    .build()
 }

@@ -26,7 +26,7 @@ impl Server {
         }
     }
 
-    fn emit_event<T: Serialize>(&self, event: &str, data: Box<T>, ids: &Vec<ObjectId>) {
+    fn emit_event<T: Serialize>(&self, event: &str, data: Box<T>, ids: &[ObjectId]) {
         if let Some(subscribed) = self.events.get(event) {
             for id in ids {
                 if let Some(addr) = subscribed.get(id) {
@@ -97,8 +97,9 @@ impl Handler<Signal> for Server {
         let users_coll = self.users_coll.clone();
 
         let send_msg = move |id: ObjectId, msg: serde_json::Value| {
-            connections.get(&id)
-                .map(|(_, addr)| addr.do_send(Send(msg.to_string())));
+            if let Some((_, addr)) = connections.get(&id) {
+                addr.do_send(Send(msg.to_string()));
+            }
         };
 
         let future = async move {
@@ -149,7 +150,7 @@ impl Handler<ConnectedIds> for Server {
     type Result = Option<Vec<ObjectId>>;
 
     fn handle(&mut self, _: ConnectedIds, _: &mut Context<Self>) -> Self::Result {
-        let res = self.connections.keys().map(|key| key.clone()).collect();
+        let res = self.connections.keys().copied().collect();
         Some(res)
     }
 }
