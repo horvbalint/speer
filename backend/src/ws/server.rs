@@ -88,8 +88,8 @@ impl Handler<Signal> for Server {
     type Result = ();
 
     // TO REVIEW: This handler really isn't pretty.
-    // The send_msg function here is the same as the self.send_msg method, but I couldn't manage to use that
-    // inside the async block.
+    // The send_msg function defined here is the same as 'self.send_msg' method, but I couldn't manage to use that
+    // inside the async block, because of the lifetime of self.
     // I really dislike the error handling as well, it would be great to use the '?' operator, but I was not able
     // to get it to work.
     fn handle(&mut self, msg: Signal, ctx: &mut Context<Self>) {
@@ -141,7 +141,7 @@ impl Handler<Disconnect> for Server {
             
         let users_coll = self.users_coll.clone();
         let events = self.events.clone();
-        let msg_id = msg._id.clone();
+        let msg_id = msg._id;
 
         let future = async move {
             if let Ok(Some(user)) = users_coll.find_one(doc!{"_id": &msg_id}, None).await {

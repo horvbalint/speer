@@ -8,7 +8,7 @@
     "build": "nuxt build",
     "start": "nuxt start",
     "generate": "nuxt generate",
-    "server": "cd backend && mold -run cargo watch -q -c -w src/ -x run",
+    "server": "cd backend && cargo watch -q -c -w src/ -x run",
     "prod-server": "cd backend && cargo run --release",
     "doc": "cd backend && cargo doc --open"
   },

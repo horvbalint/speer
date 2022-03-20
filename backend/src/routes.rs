@@ -114,8 +114,8 @@ pub async fn login_handler(
 
     Ok(
         HttpResponse::build(StatusCode::OK)
-        .cookie(cookie)
-        .body("Logged in")
+            .cookie(cookie)
+            .body("Logged in")
     )
 }
 
@@ -220,6 +220,7 @@ pub async fn avatar_handler(
     let uploaded_file = parts.files.take("avatar").pop()
         .ok_or_else(|| ErrorBadRequest("No avatar provided"))?;
 
+    // TO REVIEW: I'm pretty sure there is a better way to get the extension of a file 
     let extension = uploaded_file.original_file_name().and_then(|name| name.split('.').next_back()).unwrap_or("avatar");
     let file_name = utils::generate_random_string(32);
     let full_file_name = format!("{}.{}", file_name, extension);
@@ -559,7 +560,7 @@ pub async fn ping_handler(
         .devices;
    
     let title = format!("'{}' pinged you!", user.username);
-    let body = if ping.message.len() > 0 {
+    let body = if !ping.message.is_empty() {
         ping.message.graphemes(true).take(50).collect()
     } else {
         format!("'{}' needs you online.", user.username)

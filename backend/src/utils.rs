@@ -34,7 +34,7 @@ pub async fn send_push_notifications(users_coll: &Collection<User>, user_id: Obj
         }
     }
 
-    if expired_devices.len() > 0 {
+    if !expired_devices.is_empty() {
         let filter = doc!{"_id": user_id};
         let update = doc!{"$pull": {"devices": {"name": {"$in": &expired_devices}}}};
     

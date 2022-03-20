@@ -34,7 +34,7 @@ async fn main() -> std::io::Result<()> {
     dotenv().ok();
     env_logger::init();
 
-    let client_options = ClientOptions::parse("mongodb://localhost:27017/?retryWrites=false").await.unwrap();
+    let client_options = ClientOptions::parse("mongodb://localhost:27017/").await.unwrap();
     let client = Client::with_options(client_options).unwrap();
     let db = client.database("speer");
     let ws_server = ws::Server::new(db.collection::<schemas::User>("users")).start();
