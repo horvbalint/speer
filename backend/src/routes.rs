@@ -1,16 +1,17 @@
 use actix::Addr;
-use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie, HttpRequest, HttpMessage};
+use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie, HttpRequest, delete};
 use futures::TryStreamExt;
 use mongodb::{Collection, Database, bson::{doc, oid::ObjectId}};
 use serde::Deserialize;
 use serde_json::{Map as SerdeMap, Value as SerdeValue};
 use jsonwebtoken::{encode, Header, EncodingKey};
-use std::{fs, time::{SystemTime, UNIX_EPOCH}, str::FromStr};
+use std::{time::{SystemTime, UNIX_EPOCH}, str::FromStr, fs};
 use std::path::PathBuf;
 use actix_files::NamedFile;
 use image::imageops::FilterType;
-use crate::{CurrDir, ws::{Server, ConnectedIds, Dispatch}, EnvVars};
+use unicode_segmentation::UnicodeSegmentation;
 
+use crate::{CurrDir, ws::{Server, ConnectedIds, Dispatch}, EnvVars, schemas::Device};
 use crate::schemas::{User, MinimalUser, MeUser};
 use crate::mail;
 use crate::schemas::Confirm;
@@ -33,6 +34,12 @@ pub struct RegisterBody {
     email: String,
     username: String,
     password: String
+}
+
+#[derive(Deserialize)]
+pub struct PingBody {
+    id: ObjectId,
+    message: String,
 }
 
 #[post("/register")]
@@ -85,8 +92,8 @@ pub async fn login_handler(
     let filter = doc!{"email": &credentials.email};
 
     let user = users_coll.find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError("Incorrect credentials"))?
-        .ok_or_else(|| ErrorInternalServerError("Incorrect credentials"))?;
+        .map_err(|_| ErrorBadRequest("Incorrect credentials"))?
+        .ok_or_else(|| ErrorBadRequest("Incorrect credentials"))?;
 
     let verified = verify(&credentials.password, user.password.as_str())
         .map_err(|_| ErrorUnauthorized("Password does not match"))?;
@@ -114,21 +121,24 @@ pub async fn login_handler(
 
 #[post("/logout")]
 pub async fn logout_handler(req: HttpRequest) -> Result<impl Responder, Error> {
-    let mut builder = HttpResponse::build(StatusCode::OK);
+    let mut response = HttpResponse::build(StatusCode::OK).finish();
 
     if let Some(ref cookie) = req.cookie("speer") {
-        builder.del_cookie(cookie);
+        response.add_removal_cookie(cookie)
+            .map_err(|_| ErrorInternalServerError("Failed to remove cookie"))?;
     }
-
-    Ok(builder.finish())
+    
+    Ok(response)
 }
 
 #[post("/confirm/{token}")]
 pub async fn confirm_handler(
-    Path(token): Path<String>,
+    params: Path<String>,
     confirms_coll: Data<Collection<Confirm>>,
-    uesers_coll: Data<Collection<User>>,
+    users_coll: Data<Collection<User>>,
 ) -> Result<impl Responder, Error> {
+    let token = params.into_inner();
+
     let filter = doc!{"token": token};
     let confirm = confirms_coll.find_one(filter, None).await
         .map_err(|_| ErrorInternalServerError("Invalid token"))?
@@ -136,7 +146,8 @@ pub async fn confirm_handler(
 
     let filter = doc!{"_id": confirm.user};
     let update = doc!{"$set": {"confirmed": true}};
-    uesers_coll.update_one(filter, update, None).await
+
+    users_coll.update_one(filter, update, None).await
         .map_err(|_| ErrorInternalServerError(""))?;
 
     let filter = doc!{"_id": confirm._id};
@@ -147,10 +158,12 @@ pub async fn confirm_handler(
 
 #[post("/cancel/{token}")]
 pub async fn cancel_handler(
-    Path(token): Path<String>,
+    params: Path<String>,
     confirms_coll: Data<Collection<Confirm>>,
     users_coll: Data<Collection<User>>,
 ) -> Result<impl Responder, Error> {
+    let token = params.into_inner();
+
     let filter = doc!{"token": token};
     let confirm = confirms_coll.find_one(filter, None).await
         .map_err(|_| ErrorInternalServerError("Invalid token"))?
@@ -168,11 +181,12 @@ pub async fn cancel_handler(
 
 #[post("/resendConfirmation/{email}")]
 pub async fn resend_confirmation_handler(
-    Path(email): Path<String>,
+    params: Path<String>,
     confirms_coll: Data<Collection<Confirm>>,
     users_coll: Data<Collection<User>>,
     env_vars: Data<EnvVars>
 ) -> Result<impl Responder, Error> {
+    let email = params.into_inner();
     let filter = doc!{
         "email": email,
         "confirmed": false,
@@ -205,8 +219,6 @@ pub async fn avatar_handler(
 
     let uploaded_file = parts.files.take("avatar").pop()
         .ok_or_else(|| ErrorBadRequest("No avatar provided"))?;
-
-    dbg!(&uploaded_file);
 
     let extension = uploaded_file.original_file_name().and_then(|name| name.split('.').next_back()).unwrap_or("avatar");
     let file_name = utils::generate_random_string(32);
@@ -263,7 +275,7 @@ pub async fn onlines_handler(
 
     let friend_onlines: Vec<String> = onlines.into_iter()
         .filter(|id| user.friends.contains(id))
-        .map(|id| id.to_string())
+        .map(|id| id.to_hex())
         .collect();
 
     Ok(Json(friend_onlines))
@@ -271,11 +283,14 @@ pub async fn onlines_handler(
 
 #[get("/online/{id}")]
 pub async fn online_handler(
-    Path(id): Path<String>,
+    params: Path<String>,
     ws_addr: Data<Addr<Server>>,
     user: User,
 ) -> Result<impl Responder, Error> {
-    if !user.friends.iter().any(|f| f.to_string() == id) {
+    let id = ObjectId::parse_str(params.into_inner())
+        .map_err(|_| ErrorBadRequest("Not an id"))?;
+
+    if !user.friends.contains(&id) {
         return Err(ErrorForbidden("Not a friend"));
     }
 
@@ -283,16 +298,17 @@ pub async fn online_handler(
         .map_err(|_| ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorInternalServerError(""))?;
 
-    let is_online = onlines.iter().any(|o_id| o_id.to_string() == id);
+    let is_online = onlines.contains(&id);
     Ok(Json(is_online))
 }
 
 #[get("/user/{email}")]
 pub async fn user_by_email_handler(
-    Path(email): Path<String>,
+    params: Path<String>,
     minimal_users_coll: Data<Collection<MinimalUser>>,
     user: User,
 ) -> Result<impl Responder, Error> {
+    let email = params.into_inner();
     let filter = doc!{
         "email": email,
         "deleted": false,
@@ -330,11 +346,12 @@ pub async fn friends_handler(
 
 #[post("/request/{id}")]
 pub async fn request_id_handler(
-    Path(id): Path<String>,
+    params: Path<String>,
     users_coll: Data<Collection<User>>,
     ws_addr: Data<Addr<Server>>,
     user: User,
 ) -> Result<impl Responder, Error> {
+    let id = params.into_inner();
     let id = ObjectId::from_str(&id)
         .map_err(|_| ErrorBadRequest("Not an id"))?;
 
@@ -364,7 +381,7 @@ pub async fn request_id_handler(
     let event = Dispatch {
         event: "request".to_string(),
         payload: doc!{
-            "_id": user._id.to_string(),
+            "_id": user._id.to_hex(),
             "username": user.username,
             "email": user.email,
             "avatar": user.avatar,
@@ -379,7 +396,7 @@ pub async fn request_id_handler(
 
 #[get("/request")]
 pub async fn request_handler(
-    db: Data<Database>,
+    minimal_users_coll: Data<Collection<MinimalUser>>,
     user: User,
 ) -> Result<impl Responder, Error> {
     let filter = doc! {
@@ -389,7 +406,7 @@ pub async fn request_handler(
     };
 
 
-    let req_users: Vec<MinimalUser> = db.collection::<MinimalUser>("users").find(filter, None).await
+    let req_users: Vec<MinimalUser> = minimal_users_coll.find(filter, None).await
         .map_err(|_| ErrorInternalServerError(""))?
         .try_collect().await
         .map_err(|_| ErrorInternalServerError(""))?;
@@ -399,11 +416,12 @@ pub async fn request_handler(
 
 #[post("/accept/{id}")]
 pub async fn accept_id_handler(
-    Path(id): Path<String>,
+    params: Path<String>,
     users_coll: Data<Collection<User>>,
     ws_addr: Data<Addr<Server>>,
     user: User,
 ) -> Result<impl Responder, Error> {
+    let id = params.into_inner();
     let id = ObjectId::from_str(&id)
         .map_err(|_| ErrorBadRequest("Not an id"))?;
 
@@ -427,7 +445,7 @@ pub async fn accept_id_handler(
     let event = Dispatch {
         event: "friend".to_string(),
         payload: doc!{
-            "_id": user._id.to_string(),
+            "_id": user._id.to_hex(),
             "username": user.username,
             "email": user.email,
             "avatar": user.avatar,
@@ -444,10 +462,11 @@ pub async fn accept_id_handler(
 
 #[post("/decline/{id}")]
 pub async fn decline_id_handler(
-    Path(id): Path<String>,
+    params: Path<String>,
     users_coll: Data<Collection<User>>,
     user: User,
 ) -> Result<impl Responder, Error> {
+    let id = params.into_inner();
     let id = ObjectId::from_str(&id)
         .map_err(|_| ErrorBadRequest("Not an id"))?;
 
@@ -463,12 +482,101 @@ pub async fn decline_id_handler(
     Ok("")
 }
 
+#[post("/addDevice")]
+pub async fn add_device_handler(
+    device: Json<Device>,
+    users_coll: Data<Collection<User>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    if user.devices.iter().any(|d| d.name == device.name) {
+        return Err(ErrorBadRequest("Name collision"))
+    }
+
+    let filter = doc!{"_id": &user._id};
+    let update = doc!{"$push": {"devices": &*device}};
+    users_coll.update_one(filter, update, None).await
+        .map_err(|_| ErrorInternalServerError(""))?;
+
+    let title = "Device registered!".to_string();
+    let body = format!("Device '{}' is ready to be used.", device.name);
+    utils::send_push_notifications(&users_coll, user._id, vec![(*device).clone()], title, body).await;
+
+    Ok("")
+}
+
+#[delete("/removeDevice/{name}")]
+pub async fn remove_device_handler(
+    params: Path<String>,
+    users_coll: Data<Collection<User>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    let name = params.into_inner();
+
+    let device = user.devices.iter().find(|d| d.name == name)
+        .ok_or_else(|| ErrorBadRequest("No such device"))?;
+
+    let filter = doc!{"_id": &user._id};
+    let update = doc!{"$pull": {"devices": &device}};
+    users_coll.update_one(filter, update, None).await
+        .map_err(|_| ErrorInternalServerError(""))?;
+
+    Ok("")
+}
+
+#[post("/testDevices")]
+pub async fn test_devices_handler(
+    users_coll: Data<Collection<User>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+   
+    let title = "Test notification!".to_string();
+    let body = "This device is set up properly 🚀".to_string();
+    utils::send_push_notifications(&users_coll, user._id, user.devices, title, body).await;
+    
+    let filter = doc!{"_id": user._id};
+    let remaining_devices = users_coll.find_one(filter, None).await
+        .map_err(|_| ErrorInternalServerError(""))?
+        .ok_or_else(|| ErrorInternalServerError(""))?
+        .devices;
+
+    Ok(Json(remaining_devices))
+}
+
+#[post("/ping")]
+pub async fn ping_handler(
+    ping: Json<PingBody>,
+    users_coll: Data<Collection<User>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    if !user.friends.contains(&ping.id) {
+        return Err(ErrorBadRequest("Not friend"))
+    }
+
+    let filter = doc!{"_id": ping.id};
+    let friend_devices = users_coll.find_one(filter, None).await
+        .map_err(|_| ErrorInternalServerError(""))?
+        .ok_or_else(|| ErrorInternalServerError(""))?
+        .devices;
+   
+    let title = format!("'{}' pinged you!", user.username);
+    let body = if ping.message.len() > 0 {
+        ping.message.graphemes(true).take(50).collect()
+    } else {
+        format!("'{}' needs you online.", user.username)
+    };
+
+    let success = utils::send_push_notifications(&users_coll, ping.id, friend_devices, title, body).await;
+    Ok(Json(success))
+}
+
 #[get("/changelog/{version}")]
 pub async fn changelog_version_handler(
-    Path(version): Path<String>,
+    params: Path<String>,
     changelog: Data<SerdeMap<String, SerdeValue>>,
     _user: User,
 ) -> Result<impl Responder, Error> {
+    let version = params.into_inner();
+
     if changelog.get(&version).is_none() {
         return Err(ErrorBadRequest("No such version"));
     }
@@ -493,10 +601,12 @@ pub async fn changelog_handler(
 
 #[get("/breaking/{version}")]
 pub async fn breaking_version_handler(
-    Path(version): Path<String>,
+    params: Path<String>,
     changelog: Data<SerdeMap<String, SerdeValue>>,
     _user: User,
 ) -> Result<impl Responder, Error> {
+    let version = params.into_inner();
+
     let log_for_version = changelog.get(&version);
     if log_for_version.is_none() {
         return Err(ErrorBadRequest("No such version"));
@@ -511,10 +621,11 @@ pub async fn breaking_version_handler(
 
 #[get("/static/{file}")]
 pub async fn files_handler(
-    Path(file): Path<String>,
+    params: Path<String>,
     curr_dir : Data<CurrDir>,
     _user: User,
 ) -> Result<impl Responder, Error> {
+    let file = params.into_inner();
     let path = PathBuf::from(format!("{}/files/{}", curr_dir.path, file));
     
     let res = NamedFile::open(path)

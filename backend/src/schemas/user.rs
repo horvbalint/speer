@@ -1,23 +1,15 @@
 use std::pin::Pin;
-use actix_web::{Error, FromRequest, HttpMessage, HttpRequest, cookie::Cookie, dev, error::ErrorUnauthorized, web::Data};
+use actix_web::{Error, FromRequest, HttpRequest, cookie::Cookie, dev, error::ErrorUnauthorized, web::Data};
 use futures::{Future};
 use mongodb::{Collection, Database, bson::{doc, oid::ObjectId, serde_helpers::serialize_object_id_as_hex_string}};
 use serde::{Serialize, Deserialize};
 use jsonwebtoken::{decode, Validation, DecodingKey};
 
 use crate::{jwt::Jwt, EnvVars};
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Device {
-    pub name: String,
-    pub endpoint: String,
-    pub subscription: String,
-}
-
+use crate::schemas::{Device, MinimalDevice};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
-    #[serde(serialize_with = "serialize_object_id_as_hex_string")]
     pub _id: ObjectId,
     pub email: String,
     pub password: String,
@@ -34,7 +26,6 @@ pub struct User {
 impl FromRequest for User {
     type Error = Error;
     type Future = Pin<Box<dyn Future<Output = Result<Self, Self::Error>>>>;
-    type Config = ();
 
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
         let env_vars = req.app_data::<Data<EnvVars>>().unwrap();
@@ -100,7 +91,7 @@ pub struct MeUser {
     pub avatar: String,
     pub requests: Vec<ObjectId>,
     pub friends: Vec<ObjectId>,
-    pub devices: Vec<Device>,
+    pub devices: Vec<MinimalDevice>,
     pub confirmed: bool,
     pub deleted: bool,
 }

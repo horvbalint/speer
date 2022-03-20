@@ -1,5 +1,4 @@
 use std::fs;
-use actix_web::client::Client;
 use serde_json::json;
 
 use crate::EnvVars;
@@ -15,7 +14,7 @@ pub async fn send_confirmation(_username: &str, _email: &str, token: &str, _env_
 #[cfg(not(debug_assertions))]
 pub async fn send_confirmation(username: &str, email: &str, token: &str, env_vars: &EnvVars) -> Result<(), String> {
   let mut html = fs::read_to_string("emails/emailConfirmation.html")
-    .or_else(Err("Failed to open email template".to_string()))?;
+    .map_err(|_| "Failed to open email template".to_string())?;
 
   html = html.replace("{{CONFIRM_URL}}", format!("https://speer.fun/confirm?token={token}").as_str());
   html = html.replace("{{CANCEL_URL}}", format!("https://speer.fun/cancel?token={token}").as_str());
@@ -38,15 +37,13 @@ pub async fn send_confirmation(username: &str, email: &str, token: &str, env_var
     ]
   });
 
-  let client = Client::default();
+  let client = reqwest::Client::new();
   let response = client.post("https://api.mailjet.com/v3.1/send")
     .basic_auth(env_vars.mailjet_public.as_str(), Some(env_vars.mailjet_secret.as_str()))
-    .send_json(&content)
+    .json(&content)
+    .send()
     .await
-    .or_else(|err| {
-      println!("{err}");
-      Err("Failed to send email".to_string())
-    })?;
+    .or_else(|_| Err("Failed to send email".to_string()))?;
 
   if !response.status().is_success() {
     return Err(format!("Mailjet API error: {}", response.status()) );

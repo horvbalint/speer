@@ -10,7 +10,7 @@ pub struct Jwt {
 impl Jwt {
     pub fn new(id: ObjectId, exp: u64) -> Self {
         Jwt {
-            id: id.to_string(),
+            id: id.to_hex(),
             exp: exp as usize
         }
     }

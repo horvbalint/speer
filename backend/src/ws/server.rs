@@ -8,7 +8,7 @@ use std::{collections::{HashMap}, rc::Rc};
 
 #[derive(Debug)]
 pub struct Server {
-    connections: Rc<HashMap<ObjectId, (User, Addr<Connection>)>>,
+    connections: Rc<HashMap<ObjectId, Addr<Connection>>>,
     events: Rc<HashMap<String, HashMap<ObjectId, Addr<Connection>>>>,
     users_coll: Rc<Collection<User>>,
 }
@@ -47,11 +47,11 @@ impl Handler<Connect> for Server {
     type Result = ();
 
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) {
-        self.emit_event("login", Box::new(&msg.user._id.to_string()), &msg.user.friends);
+        self.emit_event("login", Box::new(msg.user._id.to_hex()), &msg.user.friends);
 
 
         Rc::get_mut(&mut self.connections)
-            .and_then(|connections| connections.insert(msg.user._id, (msg.user, msg.addr)));
+            .and_then(|connections| connections.insert(msg.user._id, msg.addr));
     }
 }
 
@@ -64,7 +64,7 @@ impl Handler<Subscribe> for Server {
             self.connections.get(&msg._id)
         );
 
-        if let (Some(events), Some((_, addr))) = used_fields {
+        if let (Some(events), Some(addr)) = used_fields {
             if !events.contains_key(&msg.event) {
                 events.insert(msg.event.clone(), HashMap::new());
             }
@@ -97,18 +97,18 @@ impl Handler<Signal> for Server {
         let users_coll = self.users_coll.clone();
 
         let send_msg = move |id: ObjectId, msg: serde_json::Value| {
-            if let Some((_, addr)) = connections.get(&id) {
+            if let Some(addr) = connections.get(&id) {
                 addr.do_send(Send(msg.to_string()));
             }
         };
 
         let future = async move {
-            if let Ok(Some(user))= users_coll.find_one(doc!{"_id": &msg._id}, None).await {
+            if let Ok(Some(user)) = users_coll.find_one(doc!{"_id": &msg._id}, None).await {
                 if user.friends.contains(&msg.remote_id) {
                     let payload = json!({
                         "action": "signal",
                         "peerData": msg.peer_data,
-                        "remoteId": msg._id.to_string(),
+                        "remoteId": msg._id.to_hex(),
                         "type": msg.r#type,
                         "data": msg.data,
                         "msgType": "signal"
@@ -119,7 +119,7 @@ impl Handler<Signal> for Server {
                 else {
                     let payload = json!({
                         "error": "Not friend",
-                        "remoteId": msg.remote_id.to_string(),
+                        "remoteId": msg.remote_id.to_hex(),
                         "msgType": "signal"
                     });
 
@@ -135,10 +135,36 @@ impl Handler<Signal> for Server {
 impl Handler<Disconnect> for Server {
     type Result = ();
 
-    fn handle(&mut self, msg: Disconnect, _: &mut Context<Self>) {
+    fn handle(&mut self, msg: Disconnect, ctx: &mut Context<Self>) {
         Rc::get_mut(&mut self.connections)
-            .and_then(|connections| connections.remove(&msg._id))
-            .map( |(user, _)| self.emit_event("logout", Box::new(&user._id.to_string()), &user.friends) );
+            .and_then(|connections| connections.remove(&msg._id));
+            
+        let users_coll = self.users_coll.clone();
+        let events = self.events.clone();
+        let msg_id = msg._id.clone();
+
+        let future = async move {
+            if let Ok(Some(user)) = users_coll.find_one(doc!{"_id": &msg_id}, None).await {
+                // TO REVIEW: This part below should be just a simple method call:
+                // self.emit_event("logout", Box::new(user._id.to_hex()), &user.friends);
+                // but I can't use it because it gives a liftime error on self, similar to the other 'TO REVIEW' section in this file
+                if let Some(subscribed) = events.get("logout") {
+                    for id in &user.friends {
+                        if let Some(addr) = subscribed.get(id) {
+                            let message = json!({
+                                "event": "logout",
+                                "data": user._id.to_hex(),
+                                "msgType": "pusher"
+                            });
+        
+                            addr.do_send(Send(message.to_string()));
+                        }
+                    }
+                }
+            }
+        };
+
+        future.into_actor(self).spawn(ctx);
 
         Rc::get_mut(&mut self.events)
             .map( |events| events.iter_mut() )
@@ -159,6 +185,6 @@ impl Handler<Dispatch> for Server {
     type Result = ();
 
     fn handle(&mut self, msg: Dispatch, _: &mut Context<Self>) {
-        self.emit_event(&msg.event, Box::new(&msg.payload), &msg.filter);
+        self.emit_event(&msg.event, Box::new(msg.payload), &msg.filter);
     }
 }

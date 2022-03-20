@@ -3,7 +3,7 @@ extern crate dotenv;
 use dotenv::dotenv;
 use actix::Actor;
 use actix_cors::Cors;
-use actix_web::{web, App, FromRequest, HttpServer, middleware::Logger};
+use actix_web::{web::{self, Data}, App, HttpServer, middleware::Logger};
 use mongodb::{Client, options::ClientOptions};
 use serde::Deserialize;
 use serde_json::{Map, Value};
@@ -49,21 +49,21 @@ async fn main() -> std::io::Result<()> {
         let curr_dir = CurrDir {
             path: env::current_dir().unwrap().to_str().unwrap().to_string()
         };
-        let limit_file_size = awmp::Parts::configure(|cfg| cfg.with_file_limit(20_000_000));
+        let limit_file_size = awmp::PartsConfig::default().with_file_limit(20_000_000);
         let json_string = fs::read_to_string("changelog.json").unwrap();
         let changelog = serde_json::from_str::<Map<String, Value>>(&json_string).unwrap();
         
         App::new()
-            .data(limit_file_size)
-            .data(env_vars)
-            .data(client.clone())
-            .data(db.clone())
-            .data(db.collection::<schemas::MinimalUser>("users"))
-            .data(db.collection::<schemas::User>("users"))
-            .data(db.collection::<schemas::Confirm>("confirms"))
-            .data(curr_dir)
-            .data(ws_server.clone())
-            .data(changelog)
+            .app_data(Data::new(limit_file_size))
+            .app_data(Data::new(env_vars))
+            .app_data(Data::new(client.clone()))
+            .app_data(Data::new(db.clone()))
+            .app_data(Data::new(db.collection::<schemas::MinimalUser>("users")))
+            .app_data(Data::new(db.collection::<schemas::User>("users")))
+            .app_data(Data::new(db.collection::<schemas::Confirm>("confirms")))
+            .app_data(Data::new(curr_dir))
+            .app_data(Data::new(ws_server.clone()))
+            .app_data(Data::new(changelog))
             .wrap(cors)
             .wrap(Logger::default())
             .route("/ws/", web::get().to(ws::ws_route))
@@ -83,6 +83,10 @@ async fn main() -> std::io::Result<()> {
             .service(routes::request_handler)
             .service(routes::accept_id_handler)
             .service(routes::decline_id_handler)
+            .service(routes::add_device_handler)
+            .service(routes::remove_device_handler)
+            .service(routes::test_devices_handler)
+            .service(routes::ping_handler)
             .service(routes::changelog_version_handler)
             .service(routes::changelog_handler)
             .service(routes::breaking_version_handler)
