@@ -9,7 +9,6 @@ pub struct WebPushSubscriptionKeys {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-
 pub struct WebPushSubscription {
     pub endpoint: String,
     pub expiration_time: Option<String>,

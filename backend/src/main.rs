@@ -7,8 +7,9 @@ use actix_web::{web::{self, Data}, App, HttpServer, middleware::Logger};
 use mongodb::{Client, options::ClientOptions};
 use serde::Deserialize;
 use serde_json::{Map, Value};
+use openssl::ssl::{SslAcceptor, SslMethod, SslFiletype};
 
-use std::{env, fs};
+use std::{env, fs, path::Path};
 
 mod schemas;
 mod routes;
@@ -21,8 +22,10 @@ pub struct CurrDir{
     path: String
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct EnvVars {
+    ssl_cert: Option<String>,
+    ssl_priv_key: Option<String>,
     cookie_secret: String,
     confirm_secret: String,
     mailjet_public: String,
@@ -31,16 +34,18 @@ pub struct EnvVars {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().ok();
+    dotenv().unwrap();
     env_logger::init();
 
     let client_options = ClientOptions::parse("mongodb://localhost:27017/").await.unwrap();
     let client = Client::with_options(client_options).unwrap();
     let db = client.database("speer");
     let ws_server = ws::Server::new(db.collection::<schemas::User>("users")).start();
-
-    HttpServer::new(move || {
-        let env_vars = envy::prefixed("SPEER_").from_env::<EnvVars>().unwrap();
+    let env_vars = envy::prefixed("SPEER_").from_env::<EnvVars>().unwrap();
+    let env_vars_clone = env_vars.clone();
+    
+    let server = HttpServer::new(move || {
+        let env_vars_clone = env_vars_clone.clone();
         let cors = Cors::default()
             .allowed_origin("http://localhost:9000")
             .allow_any_method()
@@ -55,7 +60,7 @@ async fn main() -> std::io::Result<()> {
         
         App::new()
             .app_data(Data::new(limit_file_size))
-            .app_data(Data::new(env_vars))
+            .app_data(Data::new(env_vars_clone))
             .app_data(Data::new(client.clone()))
             .app_data(Data::new(db.clone()))
             .app_data(Data::new(db.collection::<schemas::MinimalUser>("users")))
@@ -90,9 +95,27 @@ async fn main() -> std::io::Result<()> {
             .service(routes::changelog_version_handler)
             .service(routes::changelog_handler)
             .service(routes::breaking_version_handler)
+            .service(routes::feedback_handler)
+            .service(routes::log_handler)
             .service(routes::files_handler)
-    })
-        .bind("localhost:9001")?
-        .run()
-        .await
+    });
+
+    println!("The dark side of the 🌑 is ready!");
+
+    if cfg!(debug_assertions) {
+        server.bind("localhost:9001")?.run().await
+    }
+    else {
+        let cert_path = env_vars.ssl_cert.expect("Provide an SSL cert file path in '.env'");
+        let priv_key_path = env_vars.ssl_priv_key.expect("Provide an SSL private key file path in '.env'");
+
+        let cert_path = Path::new(&cert_path);
+        let priv_key_path = Path::new(&priv_key_path);
+
+        let mut ssl_acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+        ssl_acceptor.set_private_key_file(&priv_key_path, SslFiletype::PEM).expect("Failed to set ssl private key");
+        ssl_acceptor.set_certificate_chain_file(&cert_path).expect("Failed to set ssl cert file");
+        
+        server.bind_openssl("localhost:9001", ssl_acceptor)?.run().await
+    }
 }

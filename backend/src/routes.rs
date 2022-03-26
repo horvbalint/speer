@@ -11,7 +11,7 @@ use actix_files::NamedFile;
 use image::imageops::FilterType;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{CurrDir, ws::{Server, ConnectedIds, Dispatch}, EnvVars, schemas::Device};
+use crate::{CurrDir, ws::{Server, ConnectedIds, Dispatch}, EnvVars, schemas::{Device, Feedback}};
 use crate::schemas::{User, MinimalUser, MeUser};
 use crate::mail;
 use crate::schemas::Confirm;
@@ -64,11 +64,13 @@ pub async fn register_handler(
         password: password.to_string(),
         ..Default::default()
     };
-    users_coll.insert_one(&user, None).await
+    let insert_result = users_coll.insert_one(&user, None).await
         .map_err(|_| ErrorInternalServerError("Failed to create user"))?;
-    
-    let token = encode(&Header::default(), &body.email, &EncodingKey::from_secret(env_vars.confirm_secret.as_ref()))
+        
+    let inserted_id = insert_result.inserted_id.as_object_id().unwrap().to_string();
+    let token = encode(&Header::default(), &inserted_id, &EncodingKey::from_secret(env_vars.confirm_secret.as_ref()))
         .map_err(|_| ErrorInternalServerError(""))?;
+
     let confirm = Confirm {
         _id: ObjectId::new(),
         user: user._id,
@@ -150,8 +152,10 @@ pub async fn confirm_handler(
     users_coll.update_one(filter, update, None).await
         .map_err(|_| ErrorInternalServerError(""))?;
 
-    let filter = doc!{"_id": confirm._id};
-    confirms_coll.delete_one(filter, None).await.ok();
+    tokio::spawn(async move {
+        let filter = doc!{"_id": confirm._id};
+        confirms_coll.delete_one(filter, None).await.ok();
+    });
 
     Ok("ok")
 }
@@ -173,8 +177,10 @@ pub async fn cancel_handler(
     users_coll.delete_one(filter, None).await
         .map_err(|_| ErrorInternalServerError("Failed to cancel token"))?;
 
-    let filter = doc!{"_id": confirm._id};
-    confirms_coll.delete_one(filter, None).await.ok();
+    tokio::spawn(async move {
+        let filter = doc!{"_id": confirm._id};
+        confirms_coll.delete_one(filter, None).await.ok();
+    });
 
     Ok("ok")
 }
@@ -220,8 +226,7 @@ pub async fn avatar_handler(
     let uploaded_file = parts.files.take("avatar").pop()
         .ok_or_else(|| ErrorBadRequest("No avatar provided"))?;
 
-    // TO REVIEW: I'm pretty sure there is a better way to get the extension of a file 
-    let extension = uploaded_file.original_file_name().and_then(|name| name.split('.').next_back()).unwrap_or("avatar");
+    let extension = utils::get_file_extension(&uploaded_file, "avatar");
     let file_name = utils::generate_random_string(32);
     let full_file_name = format!("{}.{}", file_name, extension);
 
@@ -365,7 +370,6 @@ pub async fn request_id_handler(
         "confirmed": true,
         "_id": id
     };
-
     let req_user = users_coll.find_one(filter, None).await
         .map_err(|_| ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorBadRequest("User not found"))?;
@@ -378,19 +382,24 @@ pub async fn request_id_handler(
     let update = doc!{"$addToSet": {"requests": user._id}};
     users_coll.update_one(filter, update, None).await
         .map_err(|_| ErrorInternalServerError(""))?;
+   
+    tokio::spawn(async move {
+        let event = Dispatch {
+            event: "request".to_string(),
+            payload: doc!{
+                "_id": user._id.to_hex(),
+                "username": &user.username,
+                "email": &user.email,
+                "avatar": &user.avatar,
+            },
+            filter: vec![req_user._id]
+        };
+        ws_addr.send(event).await.ok();
 
-    let event = Dispatch {
-        event: "request".to_string(),
-        payload: doc!{
-            "_id": user._id.to_hex(),
-            "username": user.username,
-            "email": user.email,
-            "avatar": user.avatar,
-        },
-        filter: vec![req_user._id]
-    };
-    
-    ws_addr.send(event).await.ok();
+        let title = format!("'{}' sent you a friend request!", user.username);
+        let body = user.email;
+        utils::send_push_notifications(&users_coll, req_user._id, req_user.devices, title, body).await;
+    });
         
     Ok("")
 }
@@ -442,21 +451,28 @@ pub async fn accept_id_handler(
     let update = doc! {"$addToSet": {"friends": user._id}};
     users_coll.update_one(filter, update, None).await
         .map_err(|_| ErrorInternalServerError(""))?;
+        
+    tokio::spawn(async move {
+        let event = Dispatch {
+            event: "friend".to_string(),
+            payload: doc!{
+                "_id": user._id.to_hex(),
+                "username": &user.username,
+                "email": &user.email,
+                "avatar": &user.avatar,
+            },
+            filter: vec![id]
+        };
+        
+        ws_addr.send(event).await.ok();
 
-    let event = Dispatch {
-        event: "friend".to_string(),
-        payload: doc!{
-            "_id": user._id.to_hex(),
-            "username": user.username,
-            "email": user.email,
-            "avatar": user.avatar,
-        },
-        filter: vec![id]
-    };
-    
-    ws_addr.send(event).await.ok();
-
-    // TODO: Push-notification
+        let filter = doc! {"_id": id};
+        if let Ok(Some(requester)) = users_coll.find_one(filter, None).await {
+            let title = "New friend!".to_string();
+            let body = format!("{} accepted your friend request!", &user.username);
+            utils::send_push_notifications(&users_coll, requester._id, requester.devices, title, body).await;
+        }
+    });
 
     Ok("")
 }
@@ -498,9 +514,11 @@ pub async fn add_device_handler(
     users_coll.update_one(filter, update, None).await
         .map_err(|_| ErrorInternalServerError(""))?;
 
-    let title = "Device registered!".to_string();
-    let body = format!("Device '{}' is ready to be used.", device.name);
-    utils::send_push_notifications(&users_coll, user._id, vec![(*device).clone()], title, body).await;
+    tokio::spawn(async move {
+        let title = "Device registered!".to_string();
+        let body = format!("Device '{}' is ready to be used.", device.name);
+        utils::send_push_notifications(&users_coll, user._id, vec![(*device).clone()], title, body).await;
+    });
 
     Ok("")
 }
@@ -529,7 +547,6 @@ pub async fn test_devices_handler(
     users_coll: Data<Collection<User>>,
     user: User,
 ) -> Result<impl Responder, Error> {
-   
     let title = "Test notification!".to_string();
     let body = "This device is set up properly 🚀".to_string();
     utils::send_push_notifications(&users_coll, user._id, user.devices, title, body).await;
@@ -618,6 +635,38 @@ pub async fn breaking_version_handler(
         .any(|v| changelog[v]["type"] == "breaking");
 
     Ok(Json(new_versions))
+}
+
+#[post("/feedback")]
+pub async fn feedback_handler(
+    db: Data<Database>,
+    feedback: Json<Feedback>,
+    _user: User,
+) -> Result<impl Responder, Error> {
+    db.collection::<Feedback>("feedbacks").insert_one(&*feedback, None).await
+        .map_err(|_| ErrorInternalServerError(""))?;
+
+    Ok("")
+}
+
+#[post("/log")]
+pub async fn log_handler(
+    ws_addr: Data<Addr<Server>>,
+    user: User,
+) -> Result<impl Responder, Error> {
+    if !user.admin {
+        return Err(ErrorForbidden("You are not an admin!"));
+    }
+
+    let onlines = ws_addr.send(ConnectedIds).await
+        .map_err(|_| ErrorInternalServerError(""))?
+        .ok_or_else(|| ErrorInternalServerError(""))?;
+    
+    let onlines: Vec<String> = onlines.iter().map(|id| id.to_hex()).collect();
+
+    println!("{:?}", onlines);
+
+    Ok("")
 }
 
 #[get("/static/{file}")]

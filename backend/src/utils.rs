@@ -16,6 +16,13 @@ pub fn generate_random_string(len: usize) -> String {
         .to_lowercase()
 }
 
+pub fn get_file_extension(file: &awmp::File, fallback_str: &str) -> String {
+    return file.original_file_name()
+        .and_then(|name| name.split('.').next_back())
+        .unwrap_or(fallback_str)
+        .to_string()
+}
+
 pub async fn send_push_notifications(users_coll: &Collection<User>, user_id: ObjectId, devices: Vec<Device>, title: String, body: String) -> bool {
     let futures = devices.iter().map(|device| send_push_notification(device.clone(), title.clone(), body.clone()));
     let results = future::join_all(futures.into_iter().map(tokio::spawn)).await;
@@ -34,11 +41,15 @@ pub async fn send_push_notifications(users_coll: &Collection<User>, user_id: Obj
         }
     }
 
+    let expired_devices_clone = expired_devices.clone();
+    let users_coll_clone = users_coll.clone();
     if !expired_devices.is_empty() {
-        let filter = doc!{"_id": user_id};
-        let update = doc!{"$pull": {"devices": {"name": {"$in": &expired_devices}}}};
-    
-        users_coll.update_one(filter, update, None).await.ok();
+        tokio::spawn(async move {
+            let filter = doc!{"_id": user_id};
+            let update = doc!{"$pull": {"devices": {"name": {"$in": expired_devices_clone}}}};
+        
+            users_coll_clone.update_one(filter, update, None).await.ok();
+        });
     }
 
     expired_devices.len() < devices_len
