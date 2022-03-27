@@ -1,11 +1,13 @@
 {
-  "1.8.15": {
-    "title": "Multi-line support",
+  "2.8.15": {
+    "title": "Speer got Rusty",
     "changes": [
-      "Added support for multi-line messages. Finally."
+      "The whole backend of Speer has been rewrtitten using Rust. This means better performance, security and stability."
     ],
-    "notes": [],
-    "type": "fix"
+    "notes": [
+      "Huge amount of code was modified so expect some bugs. These are gonna be fixed as fast as possible."
+    ],
+    "type": "breaking"
   },
   "1.8.14": {
     "title": "Take it easy",

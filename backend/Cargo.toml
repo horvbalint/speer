@@ -8,8 +8,7 @@ edition = "2018"
 [dependencies]
 tokio = "1.17.0"
 actix = "0.12.0"
-openssl = "0.10.38"
-actix-web = { version = "4.0.1", features = ["openssl"] }
+actix-web = { version = "4.0.1" }
 actix-web-actors = "4.0.0"
 actix-files = "0.6.0"
 actix-cors = "0.6.0"
@@ -31,6 +30,6 @@ envy = "0.4.2"
 web-push = "0.9.1"
 unicode-segmentation = "1.9.0"
 
-[profile.release]
-strip = true
-lto = true
+# [profile.release]
+# strip = true
+# lto = true

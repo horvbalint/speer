@@ -7,9 +7,8 @@ use actix_web::{web::{self, Data}, App, HttpServer, middleware::Logger};
 use mongodb::{Client, options::ClientOptions};
 use serde::Deserialize;
 use serde_json::{Map, Value};
-use openssl::ssl::{SslAcceptor, SslMethod, SslFiletype};
 
-use std::{env, fs, path::Path};
+use std::{env, fs};
 
 mod schemas;
 mod routes;
@@ -24,8 +23,6 @@ pub struct CurrDir{
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct EnvVars {
-    ssl_cert: Option<String>,
-    ssl_priv_key: Option<String>,
     cookie_secret: String,
     confirm_secret: String,
     mailjet_public: String,
@@ -102,21 +99,5 @@ async fn main() -> std::io::Result<()> {
     });
 
     println!("The dark side of the 🌑 is ready!");
-
-    if cfg!(debug_assertions) {
-        server.bind("localhost:9001")?.run().await
-    }
-    else {
-        let cert_path = env_vars.ssl_cert.expect("Provide an SSL cert file path in '.env'");
-        let priv_key_path = env_vars.ssl_priv_key.expect("Provide an SSL private key file path in '.env'");
-
-        let cert_path = Path::new(&cert_path);
-        let priv_key_path = Path::new(&priv_key_path);
-
-        let mut ssl_acceptor = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
-        ssl_acceptor.set_private_key_file(&priv_key_path, SslFiletype::PEM).expect("Failed to set ssl private key");
-        ssl_acceptor.set_certificate_chain_file(&cert_path).expect("Failed to set ssl cert file");
-        
-        server.bind_openssl("localhost:9001", ssl_acceptor)?.run().await
-    }
+    server.bind("localhost:9001")?.run().await
 }
