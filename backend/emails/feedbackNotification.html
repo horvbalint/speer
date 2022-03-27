@@ -1,0 +1,73 @@
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="x-apple-disable-message-reformatting">
+    <title></title>
+    
+    <style type="text/css">
+      body {
+        background: white;
+      }
+      * {
+        color: #645d6b;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      p, pre {
+        font-weight: 500;
+        font-family: unset;
+      }
+      .wrapper {
+        width: 500px;
+        max-width: 90%;
+        margin: 20px auto;
+      }
+      .wrapper h1 {
+        margin-bottom: 20px;
+      }
+      .wrapper p, .wrapper pre {
+        font-size: 14px;
+      }
+      .section {
+        margin-bottom: 20px;
+      }
+      .section p {
+        margin-left: 5px;
+      }
+      .flex {
+        display: flex;
+        align-items: center;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <h1>New feedback submitted!</h1>
+      
+      <div class="section flex">
+        <h3>type:</h3>
+        <p>{{TYPE}}</p>
+      </div>
+
+      <div class="section flex">
+        <h3>date:</h3>
+        <p>{{DATE}}</p>
+      </div>
+
+      <div class="section flex">
+        <h3>version:</h3>
+        <p>{{VERSION}}</p>
+      </div>
+      
+      <div class="section">
+        <h3>description:</h3>
+        <pre>{{DESCRIPTION}}</pre>
+      </div>
+
+      <h2><strong>Speer<strong></h2>
+    </div>
+  </body>
+</html>

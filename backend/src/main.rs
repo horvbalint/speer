@@ -30,6 +30,7 @@ pub struct EnvVars {
     confirm_secret: String,
     mailjet_public: String,
     mailjet_secret: String,
+    admin_email: String,
 }
 
 #[actix_web::main]

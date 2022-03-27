@@ -640,11 +640,18 @@ pub async fn breaking_version_handler(
 #[post("/feedback")]
 pub async fn feedback_handler(
     db: Data<Database>,
+    env_vars: Data<EnvVars>,
     feedback: Json<Feedback>,
     _user: User,
 ) -> Result<impl Responder, Error> {
     db.collection::<Feedback>("feedbacks").insert_one(&*feedback, None).await
         .map_err(|_| ErrorInternalServerError(""))?;
+
+    if !cfg!(debug_assertions) {
+        tokio::spawn(async move {
+            mail::send_feedback_notification(&feedback, &env_vars).await.ok();
+        });
+    }
 
     Ok("")
 }
