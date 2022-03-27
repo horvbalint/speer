@@ -16,7 +16,7 @@ export default {
   ** See https://nuxtjs.org/api/configuration-head
   */
   server: {
-    port: 9000,
+    port: process.env.NODE_ENV == 'development' ? 9000 : 443,
   },
   head: {
     title: 'Speer',
