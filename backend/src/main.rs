@@ -23,6 +23,7 @@ pub struct CurrDir{
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct EnvVars {
+    server_port: Option<i32>,
     cookie_secret: String,
     confirm_secret: String,
     mailjet_public: String,
@@ -46,6 +47,7 @@ async fn main() -> std::io::Result<()> {
         let env_vars_clone = env_vars_clone.clone();
         let cors = Cors::default()
             .allowed_origin("http://localhost:9000")
+            .allowed_origin("https://speer.fun")
             .allow_any_method()
             .allow_any_header()
             .supports_credentials();
@@ -99,5 +101,7 @@ async fn main() -> std::io::Result<()> {
     });
 
     println!("The dark side of the 🌑 is ready!");
-    server.bind("localhost:9001")?.run().await
+
+    let server_addr = format!("localhost:{}", env_vars.server_port.unwrap_or(9001));
+    server.bind(server_addr)?.run().await
 }
