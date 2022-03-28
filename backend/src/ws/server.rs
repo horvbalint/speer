@@ -1,5 +1,5 @@
 use crate::schemas::User;
-use super::{Send, Dispatch, Connect, Disconnect, Connection, Subscribe, Unsubscribe, Signal, ConnectedIds};
+use super::{Send, Dispatch, Connect, Terminate, Disconnect, Connection, Subscribe, Unsubscribe, Signal, ConnectedIds};
 use actix::{prelude::{Actor, Context, Handler}, Addr, WrapFuture, ContextFutureSpawner};
 use mongodb::{bson::{oid::ObjectId, doc}, Collection};
 use serde::Serialize;
@@ -49,9 +49,13 @@ impl Handler<Connect> for Server {
     fn handle(&mut self, msg: Connect, _: &mut Context<Self>) {
         self.emit_event("login", Box::new(msg.user._id.to_hex()), &msg.user.friends);
 
+        if let Some(connections) = Rc::get_mut(&mut self.connections) {
+            if let Some(addr) = connections.get(&msg.user._id) {
+                addr.do_send(Terminate);
+            }
 
-        Rc::get_mut(&mut self.connections)
-            .and_then(|connections| connections.insert(msg.user._id, msg.addr));
+            connections.insert(msg.user._id, msg.addr);
+        }
     }
 }
 
@@ -138,7 +142,7 @@ impl Handler<Disconnect> for Server {
     fn handle(&mut self, msg: Disconnect, ctx: &mut Context<Self>) {
         Rc::get_mut(&mut self.connections)
             .and_then(|connections| connections.remove(&msg._id));
-            
+
         let users_coll = self.users_coll.clone();
         let events = self.events.clone();
         let msg_id = msg._id;

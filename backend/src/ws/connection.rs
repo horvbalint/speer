@@ -97,6 +97,14 @@ impl Handler<message::Send> for Connection {
     }
 }
 
+impl Handler<message::Terminate> for Connection {
+    type Result = ();
+
+    fn handle(&mut self, _: message::Terminate, ctx: &mut Self::Context) {
+        ctx.terminate();
+    }
+}
+
 impl Connection {
     pub fn new(user: User, server: Addr<server::Server>) -> Connection {
         Connection {
