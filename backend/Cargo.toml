@@ -7,7 +7,7 @@ edition = "2018"
 
 [dependencies]
 tokio = "1.17.0"
-actix = "0.12.0"
+actix = "0.13.0"
 actix-web = { version = "4.0.1" }
 actix-web-actors = "4.0.0"
 actix-files = "0.6.0"
