@@ -1,4 +1,14 @@
 {
+  "2.8.15": {
+    "title": "Speer got Rusty",
+    "changes": [
+      "The whole backend of Speer has been rewrtitten using Rust. This means better performance, security and stability."
+    ],
+    "notes": [
+      "Huge amount of code was modified so expect some bugs. These are gonna be fixed as fast as possible."
+    ],
+    "type": "breaking"
+  },
   "1.8.14": {
     "title": "Take it easy",
     "changes": [

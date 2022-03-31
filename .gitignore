@@ -1,6 +1,10 @@
 backend/files/*
 !backend/files/avatar.jpg
+backend/target
+backend/Cargo.lock
 backend/config.json
+backend/.env
+backend/vapid.pem
 
 # Created by .ignore support plugin (hsz.mobi)
 ### Node template

@@ -19,7 +19,7 @@
       <ul>
         <li
           v-for="device in $store.state.user.devices"
-          :key="device._id"
+          :key="device.name"
           @click="removeDevice(device)"
         >{{ device.name }}<i class="fas fa-trash"/></li>
       </ul>
@@ -97,7 +97,7 @@ export default {
       navigator.serviceWorker.ready
         .then( reg => {
           let config = {
-            applicationServerKey: 'BHolPVncmPPJ2ho6n8V8lhLthMLK3s09JRraFamhnl8xji377P0ZaFXuMUZCVLMnlOh9wHoA-F-yZx9rxu4O-Ho',
+            applicationServerKey: this.urlBase64ToUint8Array('BEMNX5I_G55_kNJSYq93Mmg6xG-MPi2u50vXVT_85tT11jx-znguCCfUNEE7x4AiEWutQEU891SxvRn6825koCk='),
             userVisibleOnly: true
           }
 
@@ -114,12 +114,13 @@ export default {
       if(!this.newDeviceName.trim())
         return errorBox('Error!', 'Please enter a name for the device')
 
-      this.$axios.$post('/addDevice', {
+      let device = {
         name: this.newDeviceName.trim(),
-        endpoint: this.deviceSubscription.endpoint,
         subscription: this.deviceSubscription.toJSON(),
-      })
-        .then( device => this.$store.dispatch('addDevice', device) )
+      }
+
+      this.$axios.$post('/addDevice', device)
+        .then( () => this.$store.dispatch('addDevice', device) )
         .catch( err => {
           console.error(err)
           errorBox('Error!', 'Failed to add device')
@@ -132,7 +133,7 @@ export default {
     removeDevice(device) {
       if( !confirm(`Do you want to remove this device: ${device.name}?`) ) return
         
-      this.$axios.$delete(`/removeDevice/${device._id}`)
+      this.$axios.$delete(`/removeDevice/${device.name}`)
         .then( () => this.$store.dispatch('removeDevice', device) )
         .catch( err => {
           console.error(err)
@@ -154,6 +155,20 @@ export default {
     },
     support() {
       window.open('https://www.buymeacoffee.com/speer', '_blank').focus()
+    },
+    urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - base64String.length % 4) % 4);
+      const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+      const rawData = window.atob(base64);
+      const outputArray = new Uint8Array(rawData.length);
+
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+      }
+      return outputArray;
     }
   },
   components: {

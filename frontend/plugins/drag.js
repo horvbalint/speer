@@ -5,7 +5,7 @@ window.Drag = class Drag {
     setter,
     onEnd,
     onDone,
-    animationLength = 250,
+    animationLength = 200,
     bezierPoints = [0, 0.85, 0.95, 1],
     direction = 'x',
     surface = window,

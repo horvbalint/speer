@@ -1,7 +1,6 @@
 // A class that handles the signaling works to get connected with remote peers.
 export default class Pusher {
-  constructor({address = null, onClose = null, maxRetryCount = 10, retryFrequency = 10000}) {
-    this._address         = address
+  constructor({onClose = null, maxRetryCount = 10, retryFrequency = 10000} = {}) {
     this._maxRetryCount   = maxRetryCount
     this._retryFrequency  = retryFrequency
 
@@ -12,40 +11,28 @@ export default class Pusher {
     if(onClose) this._onClose = onClose
   }
 
-  connect({address = this._address} = {}) {
-    return new Promise( (resolve, reject) => {
-      this._address           = address
-      this._socket            = new WebSocket(this._address)
-      this._connectionResolve = resolve
+  init(socket) {
+      this._socket = socket
     
       this._socket.addEventListener('error', error => {
-        reject(error)
         this._onCloseHandler(error)
       })
       this._socket.addEventListener('close', error => {
-        reject()
         this._onCloseHandler(error)
       })
-  
-      this._socket.addEventListener('open', () => {
-        this._retryCount = 0
-        
-        for(let event in this._subscriptions) {
-          this.subscribe(event, this._subscriptions[event])
-        }
 
-        console.log('[Pusher] - Connection successful.')
-        resolve(this)
-      })
+      for(let event in this._subscriptions) {
+        this.subscribe(event, this._subscriptions[event])
+      }
   
       // Handling message from signal server
       this._socket.addEventListener('message', event => {
         let data = JSON.parse(event.data)
-        
+        if(data.msgType != 'pusher') return
+
         if(this._subscriptions[data.event])
           this._subscriptions[data.event](data.data)
       })
-    })
   }
 
   subscribe(event, callback) {

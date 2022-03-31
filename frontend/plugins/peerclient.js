@@ -2,9 +2,8 @@ const Peer = require('simple-peer')
 
 // A class that handles the signaling works to get connected with remote peers.
 export default class PeerClient {
-  constructor({address, onClose = null, maxRetryCount = 10, retryFrequency = 10000}) {
+  constructor({onClose = null, maxRetryCount = 10, retryFrequency = 10000} = {}) {
     this._signaling    = {}
-    this._address      = address
     this._maxRetryCount   = maxRetryCount
     this._retryFrequency  = retryFrequency
 
@@ -14,45 +13,32 @@ export default class PeerClient {
 
     if(onClose) this._onClose = onClose
   }
-  connect({address = this._address} = {}) {
-    return new Promise((resolve, reject) => {
-      this._address           = address
-      this._socket            = new WebSocket(this._address)
-      this._connectionResolve = resolve
-  
-      this._socket.addEventListener('error', error => {
-        reject(error)
-        this._onCloseHandler(error)
-      })
-      this._socket.addEventListener('close', error => {
-        reject()
-        this._onCloseHandler(error)
-      })
+  init(socket) {
+    this._socket = socket
 
-      this._socket.addEventListener('open', () => {
-        this._retryCount = 0
+    this._socket.addEventListener('error', error => {
+      this._onCloseHandler(error)
+    })
+    this._socket.addEventListener('close', error => {
+      this._onCloseHandler(error)
+    })
 
-        console.log('[PeerClient] - Connection successful.')
-        resolve(this)
-      })
-  
-      // Handling message from signal server
-      this._socket.addEventListener('message', event => {
-        let data = JSON.parse(event.data)
+    // Handling message from signal server
+    this._socket.addEventListener('message', event => {
+      let data = JSON.parse(event.data)
+      if(data.msgType != 'signal') return
 
-        if(data.error) {
-          if(this._signaling[data.remoteId]) {
-            this._signaling[data.remoteId].reject(data.error)
-            delete this._signaling[data.remoteId]
-          }
-          
-          return
+      if(data.error) {
+        if(this._signaling[data.remoteId]) {
+          this._signaling[data.remoteId].reject(data.error)
+          delete this._signaling[data.remoteId]
         }
+        
+        return
+      }
 
-        if(data.type == 'group') this._handleGroupConnection(data)
-        else if(!this._signaling[data.remoteId]) this._handleNewSignalConnection(data)
-        else this._handleReceivedRequestedSignalData(data)
-      })
+      if(!this._signaling[data.remoteId]) this._handleNewSignalConnection(data)
+      else this._handleReceivedRequestedSignalData(data)
     })
   }
 
@@ -98,7 +84,7 @@ export default class PeerClient {
 
   // Feeding the remote peer's requested data to Simple-Peer
   async _handleReceivedRequestedSignalData(data) {
-    this._signaling[data.remoteId].peer.signal(data.peerData)
+    this._signaling[data.remoteId].peer.signal(JSON.parse(data.peerData))
   }
 
   _handleGroupConnection(data) {
@@ -112,7 +98,7 @@ export default class PeerClient {
       this._signaling[remoteId] = {resolve, reject} // this needs to exist before the peer is created
       this._signaling[remoteId].peer = this._createPeerForSignaling(remoteId, type, initiator, data)
       
-      if(peerData) this._signaling[remoteId].peer.signal(peerData)
+      if(peerData) this._signaling[remoteId].peer.signal(JSON.parse(peerData))
     })
   }
 
@@ -123,7 +109,7 @@ export default class PeerClient {
       this._send({
         action: 'signal',
         remoteId: remoteId,
-        peerData,
+        peerData: JSON.stringify(peerData),
         type,
         data,
       })

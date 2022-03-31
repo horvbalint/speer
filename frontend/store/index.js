@@ -219,7 +219,7 @@ export const mutations = {
     state.user.devices.push(device)
   },
   removeDevice(state, device) {
-    state.user.devices = state.user.devices.filter( d => d._id != device._id )
+    state.user.devices = state.user.devices.filter( d => d.name != device.name )
   },
   setUserAvatar(state, avatar) {
     state.user.avatar = avatar
