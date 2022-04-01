@@ -55,8 +55,14 @@ export default {
       currentDuration: '00:00',
       canScreenShare: false,
       sources: {
-        audio: [],
-        video: [],
+        audio: {
+          input: [],
+          output: []
+        },
+        video: {
+          input: [],
+          output: []
+        },
       }
     }
   },
@@ -67,8 +73,9 @@ export default {
     .then( devices => {
       for(let device of devices) {
         switch(device.kind) {
-          case 'audioinput':  this.sources.audio.push(device); break;
-          case 'videoinput':  this.sources.video.push(device); break;
+          case 'audioinput':  this.sources.audio.input.push(device); break;
+          case 'audiooutput': this.sources.audio.output.push(device); break;
+          case 'videoinput':  this.sources.video.input.push(device); break;
         }
       }
     })
@@ -76,6 +83,14 @@ export default {
   mounted() {
     if(this.$store.getters.call.stream)
       this.$refs.localVideo.srcObject = this.$store.getters.call.stream
+
+    if(this.$store.state.call.audioOutputDevice) {
+      if(this.$refs.video)
+        this.$refs.video.setSinkId(this.$store.state.call.audioOutputDevice)
+
+      if(this.$refs.secondAudio)
+        this.$refs.secondAudio.setSinkId(this.$store.state.call.audioOutputDevice)
+    }
   },
   methods: {
     requestFullScreen() {
@@ -137,6 +152,15 @@ export default {
 
       this.$refs.localVideo.srcObject = this.$store.getters.call.stream
     },
+    '$store.state.call.audioOutputDevice': function() {
+      if(this.$store.state.call.audioOutputDevice) {
+        if(this.$refs.video)
+          this.$refs.video.setSinkId(this.$store.state.call.audioOutputDevice)
+
+        if(this.$refs.secondAudio)
+          this.$refs.secondAudio.setSinkId(this.$store.state.call.audioOutputDevice)
+      }
+    }
   },
   beforeDestroy() {
     if(this.timeOut) clearInterval(this.timeOut)

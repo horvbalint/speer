@@ -3,6 +3,7 @@ export const strict = false
 export const state = () => ({
   partner: null,
   fullScreen: false,
+  audioOutputDevice: null,
 })
 
 export const mutations = {
@@ -14,6 +15,9 @@ export const mutations = {
   },
   setFullScreen(state, value) {
     state.fullScreen = value
+  },
+  setAudioOutputDevice(state, value) {
+    state.audioOutputDevice = value
   }
 }
 
@@ -265,30 +269,32 @@ export const actions = {
     }
   },
   setConstraints(ctx, {remoteId = ctx.state.partner._id, constraints}) {
-    let selectedNewAudioDevice = constraints.audio.deviceId != ctx.rootGetters.call.constraints.audio.deviceId
-    let selectedNewVideoDevice = constraints.video.deviceId != ctx.rootGetters.call.constraints.video.deviceId
+    let selectedNewAudioInputDevice = constraints.audio.input.deviceId != ctx.rootGetters.call.constraints.audio.input.deviceId
+    let selectedNewVideoInputDevice = constraints.video.input.deviceId != ctx.rootGetters.call.constraints.video.input.deviceId
+    
     ctx.commit('setConstraints', {remoteId, constraints}, {root: true})
+    ctx.commit('setAudioOutputDevice', constraints.audio.output.deviceId)
 
     if(ctx.rootGetters.call.tracks.audio.main) {
-      if(selectedNewAudioDevice) {
+      if(selectedNewAudioInputDevice) {
         ctx.dispatch('muteAudio')
         setTimeout( () => ctx.dispatch('unmuteAudio'), 100)
       }
       else
-        ctx.rootGetters.call.tracks.audio.main.applyConstraints(constraints.audio)
+        ctx.rootGetters.call.tracks.audio.main.applyConstraints(constraints.audio.input)
     }
   
     if(ctx.rootGetters.call.tracks.video.main) {
-      if(selectedNewVideoDevice) {
+      if(selectedNewVideoInputDevice) {
         ctx.dispatch('disableVideo')
         setTimeout( () => ctx.dispatch('enableVideo'), 100)
       }
       else
-        ctx.rootGetters.call.tracks.video.main.applyConstraints(constraints.video)
+        ctx.rootGetters.call.tracks.video.main.applyConstraints(constraints.video.input)
     }
 
     if(ctx.rootGetters.call.tracks.video.screen)
-      ctx.rootGetters.call.tracks.video.screen.applyConstraints(constraints.video)
+      ctx.rootGetters.call.tracks.video.screen.applyConstraints(constraints.video.input)
   },
   setFullScreen(ctx, value) {
     ctx.commit('setFullScreen', value)

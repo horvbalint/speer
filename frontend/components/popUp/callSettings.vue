@@ -8,33 +8,43 @@
     <div class="settings">
       <h3>Video:</h3>
       <div class="video">
-        <p for="fps">Max fps. ({{constraints.frameRate}})</p>
-        1 <input v-model="constraints.frameRate" id="fps" type="range" min="1" max="60"> 60
+        <p for="fps">Max fps. ({{inputConstraints.frameRate}})</p>
+        1 <input v-model="inputConstraints.frameRate" id="fps" type="range" min="1" max="60"> 60
 
         <p for="quality">Max quality</p>
-        <input type="radio" id="1080" :value="1080" v-model="constraints.height">
+        <input type="radio" id="1080" :value="1080" v-model="inputConstraints.height">
         <label for="1080">1080p</label>
-        <input type="radio" id="720" :value="720" v-model="constraints.height">
+        <input type="radio" id="720" :value="720" v-model="inputConstraints.height">
         <label for="720">720p</label>
-        <input type="radio" id="480" :value="480" v-model="constraints.height">
+        <input type="radio" id="480" :value="480" v-model="inputConstraints.height">
         <label for="480">480p</label>
-        <input type="radio" id="360" :value="360" v-model="constraints.height">
+        <input type="radio" id="360" :value="360" v-model="inputConstraints.height">
         <label for="360">360p</label>
       </div>
 
-      <h3>Sources</h3>
+      <h3>Input devices</h3>
       <div class="sources">
-        <div v-if="sources.audio.length">
+        <div v-if="sources.audio.input.length" class="device-selector-wrapper">
           <label for="microphone">Microphone</label>
-          <select id="microphone" v-model="device.audio">
-            <option v-for="device in sources.audio" :key="device.deviceId" :value="device.deviceId">{{device.label}}</option>
+          <select id="microphone" v-model="devices.audio.input">
+            <option v-for="device in sources.audio.input" :key="device.deviceId" :value="device.deviceId">{{device.label}}</option>
           </select>
         </div>
 
-        <div v-if="sources.video.length">
+        <div v-if="sources.video.input.length" class="device-selector-wrapper">
           <label for="camera">Camera</label>
-          <select id="camera" v-model="device.video">
-            <option v-for="device in sources.video" :key="device.deviceId" :value="device.deviceId">{{device.label}}</option>
+          <select id="camera" v-model="devices.video.input">
+            <option v-for="device in sources.video.input" :key="device.deviceId" :value="device.deviceId">{{device.label}}</option>
+          </select>
+        </div>
+      </div>
+
+      <h3>Output devices</h3>
+      <div class="sources">
+        <div v-if="sources.audio.output.length" class="device-selector-wrapper">
+          <label for="speaker">Speaker</label>
+          <select id="speaker" v-model="devices.audio.output">
+            <option v-for="device in sources.audio.output" :key="device.deviceId" :value="device.deviceId">{{device.label}}</option>
           </select>
         </div>
       </div>
@@ -51,14 +61,20 @@ export default {
   },
   data() {
     return {
-      constraints: {
-        frameRate: this.$store.getters.call.constraints.video.frameRate.max,
-        height: this.$store.getters.call.constraints.video.height.max,
-        echoCancellation: this.$store.getters.call.constraints.audio.echoCancellation,
+      inputConstraints: {
+        frameRate: this.$store.getters.call.constraints.video.input.frameRate.max,
+        height: this.$store.getters.call.constraints.video.input.height.max,
+        echoCancellation: this.$store.getters.call.constraints.audio.input.echoCancellation,
       },
-      device: {
-        audio: this.$store.getters.call.constraints.audio.deviceId,
-        video: this.$store.getters.call.constraints.video.deviceId,
+      devices: {
+        audio: {
+          input: this.$store.getters.call.constraints.audio.input.deviceId,
+          output: this.$store.state.call.audioOutputDevice,
+        },
+        video: {
+          input: this.$store.getters.call.constraints.video.input.deviceId,
+          output: null
+        }
       },
       buttons: [
         {
@@ -77,25 +93,32 @@ export default {
     let videoTrack = this.$store.getters.call.stream.getVideoTracks()[0]
 
     if(audioTrack)
-      this.device.audio = audioTrack.getSettings().deviceId
+      this.devices.audio.input = audioTrack.getSettings().deviceId
 
     if(videoTrack)
-      this.device.video = videoTrack.getSettings().deviceId
+      this.devices.video.input = videoTrack.getSettings().deviceId
   },
   methods: {
     setConstraints() {
       let constraints = {
         video: {
-          height: { max: this.constraints.height },
-          frameRate: { max: this.constraints.frameRate },
+          input: {
+            height: { max: this.inputConstraints.height },
+            frameRate: { max: this.inputConstraints.frameRate },
+          },
+          output: {},
         },
         audio: {
-          echoCancellation: this.constraints.echoCancellation,
+          input: {
+            echoCancellation: this.inputConstraints.echoCancellation,
+          },
+          output: {},
         }
       }
 
-      if(this.device.video && !this.device.video.startsWith('screen:')) constraints.video.deviceId = this.device.video
-      if(this.device.audio) constraints.audio.deviceId = this.device.audio
+      if(this.devices.video.input && !this.devices.video.input.startsWith('screen:')) constraints.video.input.deviceId = this.devices.video.input
+      if(this.devices.audio.input) constraints.audio.input.deviceId = this.devices.audio.input
+      if(this.devices.audio.output) constraints.audio.output.deviceId = this.devices.audio.output
 
       this.$store.dispatch('call/setConstraints', {constraints})
       this.$store.dispatch('popUp/close', 'callSettings')
@@ -114,20 +137,27 @@ export default {
 }
 h3 {
   font-size: 20px;
-  margin-bottom: 10px;
+  margin: 20px 0 10px;
 }
 .video {
-  margin: 0 0 20px 20px;
+  margin-left: 20px;
 }
 .video p {
   margin: 10px 0 3px;
 }
-.sources label {
+.sources .device-selector-wrapper {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+}
+.sources .device-selector-wrapper label {
   margin-left: 20px;
 }
-.sources select {
+.sources .device-selector-wrapper select {
+  flex: 1;
   border-radius: 5px;
   background: var(--white);
-  max-width: 100%;
+  max-width: 200px;
 }
 </style>

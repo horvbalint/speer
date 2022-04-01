@@ -106,13 +106,19 @@ export const mutations = {
         hasRemoteAudio: false,
         hasRemoteVideo: false,
         constraints: {
-          video: {
-            height: { max: 1080 },
-            frameRate: { max: 25 },
+          video: { 
+            input: {
+              height: { max: 1080 },
+              frameRate: { max: 25 },
+            },
+            output: {}
           },
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
+          audio: { 
+            input: {
+              echoCancellation: true,
+              noiseSuppression: true,
+            },
+            output: {}
           }
         },
         startTime: null
@@ -290,13 +296,19 @@ export const mutations = {
     state.partners[remoteId].call.hasRemoteAudio = false
     state.partners[remoteId].call.hasRemoteVideo = false
     state.partners[remoteId].call.constraints = {
-      video: {
-        height: { max: 1080 },
-        frameRate: { max: 25 },
+      video: { 
+        input: {
+          height: { max: 1080 },
+          frameRate: { max: 25 },
+        },
+        output: {}
       },
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
+      audio: { 
+        input: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+        output: {}
       }
     }
     state.partners[remoteId].call.startTime = null
