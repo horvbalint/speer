@@ -1,11 +1,21 @@
 {
+  "2.9.15": {
+    "title": "More call settings",
+    "changes": [
+      "Added support for changing the audio output device during calls"
+    ],
+    "notes": [
+      "This feature is only supported in Chromium based browsers out of the box. If you are using Firefox you can enable it using the 'media.setsinkid.enabled' flag."
+    ],
+    "type": "feature"
+  },
   "2.8.15": {
     "title": "Speer got Rusty",
     "changes": [
-      "The whole backend of Speer has been rewrtitten using Rust. This means better performance, security and stability."
+      "The whole backend of Speer has been rewrtitten using Rust. This means better performance, security and stability"
     ],
     "notes": [
-      "Huge amount of code was modified so expect some bugs. These are gonna be fixed as fast as possible."
+      "Huge amount of code was modified so expect some bugs. These are gonna be fixed as fast as possible"
     ],
     "type": "breaking"
   },
