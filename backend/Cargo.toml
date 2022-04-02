@@ -1,5 +1,5 @@
 [package]
-name = "speers"
+name = "speer"
 version = "0.1.0"
 edition = "2018"
 
@@ -29,7 +29,8 @@ dotenv = "0.15.0"
 envy = "0.4.2"
 web-push = "0.9.1"
 unicode-segmentation = "1.9.0"
+openssl = { version = "0.10.38", features = ["vendored"] } # only needed to be able to compile to target "x86_64-unknown-linux-musl"
 
-# [profile.release]
-# strip = true
-# lto = true
+[profile.release]
+strip = true
+lto = true
