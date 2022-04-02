@@ -1,6 +1,6 @@
 
 export default {
-  srcDir: 'frontend/',
+  rootDir: 'frontend/',
   /*
   ** Nuxt rendering mode
   ** See https://nuxtjs.org/api/configuration-mode
