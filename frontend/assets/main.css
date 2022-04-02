@@ -18,12 +18,6 @@
   --p-size: 18px;
 }
 
-@font-face {
-  font-family: Roboto;
-  src: url('/font/Roboto-Regular.ttf');
-  font-weight: normal;
-}
-
 html {
   background: var(--bg-color);
   color: var(--white);
@@ -67,8 +61,7 @@ input {
 }
 
 h1, h2, h3, h4, h5, h6, p, div, pre, input, textarea, button {
-  font-family: Roboto;
-  font-display: swap;
+  font-family: 'Roboto', sans-serif;
 }
 
 .page-enter-active,

@@ -9,9 +9,9 @@
     </div>
 
     <div
-    v-if="$store.state.user"
-    class="profile"
-    @click="$store.dispatch('popUp/open', 'profile')"
+      v-if="$store.state.user"
+      class="profile"
+      @click="$store.dispatch('popUp/open', 'profile')"
     >
       <span>{{$store.state.user.username}}</span>
       <div class="avatar" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.user.avatar}')`}"/>
@@ -56,10 +56,6 @@
     </div>
 
     <div class="messages" ref="messages" @dragover="handleDragOver($event)" @drop="hanldeDrop($event)" @dragleave="handleDragLeave($event)">
-      <div v-if="fileDragOver" class="drag-topper">
-        <p>Drop files here to send them!</p>
-      </div>
-
       <div
         v-for="(message, index) in $store.getters.partner.text.messages"
         :key="`m-${index}`"
@@ -74,10 +70,7 @@
         :title="formatTimeStamp(message.timeStamp)"
         @click="handleMessageClick(message)"
       >
-        <p>{{message.message}}
-          <i v-if="message.call" class="fas fa-phone"/>
-          <i v-else-if="message.file" class="fas fa-file"/>
-        </p>
+        <p>{{message.message}}<i class="fas" :class="{'fa-phone': message.call, 'fa-file': message.file}"/></p>
       </div>
     </div>
 
@@ -96,6 +89,10 @@
         ></i>
         <i class="fas fa-paper-plane" @click="send()"></i>
       </div>
+    </div>
+
+    <div v-if="fileDragOver" class="drag-topper">
+      <p>Drop files here to send them!</p>
     </div>
   </div>
 </template>
@@ -362,6 +359,7 @@ export default {
   text-decoration: underline;
 }
 .index {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100vh;
@@ -434,7 +432,7 @@ export default {
   margin-left: 10px;
 }
 .message p {
-  white-space: pre-line;
+  white-space: pre-wrap;
   padding: 5px 15px 5px 20px;
   font-size: var(--p-size);
   user-select: text;

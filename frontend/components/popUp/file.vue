@@ -8,7 +8,7 @@
     <p class="description">{{$store.state.popUp.file.sender.username}} wants to send you a file!</p>
 
     <div class="file">
-      <p>Filename: <span>{{$store.state.popUp.file.file.name}}</span></p>
+      <p>Filename: <span :title="$store.state.popUp.file.file.name">{{$store.state.popUp.file.file.name}}</span></p>
       <p>Size: <span>{{getFileSize($store.state.popUp.file.file.size)}}</span></p>
     </div>
 
@@ -94,9 +94,12 @@ export default {
   text-align: center;
   margin: 3px 0;
   font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .file p span {
   font-weight: normal;
+  user-select: text;
 }
 .option {
   display: flex;
