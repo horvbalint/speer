@@ -27,19 +27,7 @@ impl Server {
     }
 
     fn emit_event<T: Serialize>(&self, event: &str, data: Box<T>, ids: &[ObjectId]) {
-        if let Some(subscribed) = self.events.get(event) {
-            for id in ids {
-                if let Some(addr) = subscribed.get(id) {
-                    let message = json!({
-                        "event": event,
-                        "data": data,
-                        "msgType": "pusher"
-                    });
-
-                    addr.do_send(Send(message.to_string()));
-                }
-            }
-        }
+        emit_event(self.events.clone(), event, data, ids).ok();
     }
 }
 
@@ -91,11 +79,6 @@ impl Handler<Unsubscribe> for Server {
 impl Handler<Signal> for Server {
     type Result = ();
 
-    // TO REVIEW: This handler really isn't pretty.
-    // The send_msg function defined here is the same as 'self.send_msg' method, but I couldn't manage to use that
-    // inside the async block, because of the lifetime of self.
-    // I really dislike the error handling as well, it would be great to use the '?' operator, but I was not able
-    // to get it to work.
     fn handle(&mut self, msg: Signal, ctx: &mut Context<Self>) {
         let connections = self.connections.clone();
         let users_coll = self.users_coll.clone();
@@ -149,22 +132,7 @@ impl Handler<Disconnect> for Server {
 
         let future = async move {
             if let Ok(Some(user)) = users_coll.find_one(doc!{"_id": &msg_id}, None).await {
-                // TO REVIEW: This part below should be just a simple method call:
-                // self.emit_event("logout", Box::new(user._id.to_hex()), &user.friends);
-                // but I can't use it because it gives a liftime error on self, similar to the other 'TO REVIEW' section in this file
-                if let Some(subscribed) = events.get("logout") {
-                    for id in &user.friends {
-                        if let Some(addr) = subscribed.get(id) {
-                            let message = json!({
-                                "event": "logout",
-                                "data": user._id.to_hex(),
-                                "msgType": "pusher"
-                            });
-        
-                            addr.do_send(Send(message.to_string()));
-                        }
-                    }
-                }
+                emit_event(events.clone(), "logout", Box::new(user._id.to_hex()), &user.friends).ok();
             }
         };
 
@@ -172,7 +140,7 @@ impl Handler<Disconnect> for Server {
 
         Rc::get_mut(&mut self.events)
             .map( |events| events.iter_mut() )
-            .map( |events| events.for_each(|(_, map)| {map.remove(&msg._id);}) );
+            .map( |events| events.for_each(|(_, map)| {map.remove(&msg._id);}) );    
     }
 }
 
@@ -191,4 +159,23 @@ impl Handler<Dispatch> for Server {
     fn handle(&mut self, msg: Dispatch, _: &mut Context<Self>) {
         self.emit_event(&msg.event, Box::new(msg.payload), &msg.filter);
     }
+}
+
+fn emit_event<T: Serialize>(events: Rc<HashMap<String, HashMap<ObjectId, Addr<Connection>>>>, event: &str, data: Box<T>, ids: &[ObjectId]) -> Result<(), ()> {
+    let subscribed = events.get(event)
+        .ok_or_else(|| ())?;
+
+    ids.iter().map(|id| subscribed.get(&id))
+        .filter(|addr| addr.is_some())
+        .for_each(|addr| {
+            let message = json!({
+                "event": event,
+                "data": data,
+                "msgType": "pusher"
+            }).to_string();
+
+            addr.unwrap().do_send(Send(message));
+        });
+
+    Ok(())
 }

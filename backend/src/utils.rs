@@ -25,25 +25,19 @@ pub fn get_file_extension(file: &awmp::File, fallback_str: &str) -> String {
 
 pub async fn send_push_notifications(users_coll: &Collection<User>, user_id: ObjectId, devices: Vec<Device>, title: String, body: String) -> bool {
     let futures = devices.iter().map(|device| send_push_notification(device.clone(), title.clone(), body.clone()));
-    let results = future::join_all(futures.into_iter().map(tokio::spawn)).await;
+    let results = future::join_all(futures).await;
 
     let devices_len = devices.len();
-    let mut expired_devices = vec![];
+    let expired_devices: Vec<_> = results.iter()
+        .zip(devices)
+        .filter(|(result, _)| result.is_err())
+        .map(|(_, device)| device.name)
+        .collect();
 
-    for (result, device) in results.iter().zip(devices) {
-        match result {
-            Ok(res) => {
-                if res.is_err() {
-                    expired_devices.push(device.name)
-                }
-            },
-            Err(_) => expired_devices.push(device.name)
-        }
-    }
-
-    let expired_devices_clone = expired_devices.clone();
-    let users_coll_clone = users_coll.clone();
     if !expired_devices.is_empty() {
+        let expired_devices_clone = expired_devices.clone();
+        let users_coll_clone = users_coll.clone();
+
         tokio::spawn(async move {
             let filter = doc!{"_id": user_id};
             let update = doc!{"$pull": {"devices": {"name": {"$in": expired_devices_clone}}}};
@@ -56,28 +50,26 @@ pub async fn send_push_notifications(users_coll: &Collection<User>, user_id: Obj
 }
 
 async fn send_push_notification(device: Device, title: String, body: String) -> Result<(), WebPushError> {
-    if let Ok(file) = File::open("vapid.pem") {
-        let subscription_info = SubscriptionInfo::new(
-            &device.subscription.endpoint,
-            &device.subscription.keys.p256dh,
-            &device.subscription.keys.auth
-        );
+    let file = File::open("vapid.pem")
+        .map_err(|_| WebPushError::Unspecified)?;
+
+    let subscription_info = SubscriptionInfo::new(
+        &device.subscription.endpoint,
+        &device.subscription.keys.p256dh,
+        &device.subscription.keys.auth
+    );
+
+    let sig_builder = VapidSignatureBuilder::from_pem(file, &subscription_info)?.build()?;
+
+    let content = json!({"title": title, "body": body}).to_string();
+    let content = content.as_bytes();
     
-        let sig_builder = VapidSignatureBuilder::from_pem(file, &subscription_info)?.build()?;
+    let mut message_builder = WebPushMessageBuilder::new(&subscription_info)?;
+    message_builder.set_payload(ContentEncoding::Aes128Gcm, content);
+    message_builder.set_vapid_signature(sig_builder);
     
-        let content = json!({"title": title, "body": body}).to_string();
-        let content = content.as_bytes();
-        
-        let mut message_builder = WebPushMessageBuilder::new(&subscription_info)?;
-        message_builder.set_payload(ContentEncoding::Aes128Gcm, content);
-        message_builder.set_vapid_signature(sig_builder);
-        
-        let message = message_builder.build()?;
-        let client = WebPushClient::new()?;
-    
-        client.send(message).await
-    }
-    else {
-        Err(WebPushError::Unspecified)
-    }
+    let message = message_builder.build()?;
+    let client = WebPushClient::new()?;
+
+    client.send(message).await
 }
