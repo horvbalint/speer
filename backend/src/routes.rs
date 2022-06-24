@@ -1,5 +1,5 @@
 use actix::Addr;
-use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::Cookie, HttpRequest, delete};
+use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::{Cookie, SameSite, time::{OffsetDateTime, ext::NumericalDuration}}, HttpRequest, delete};
 use futures::TryStreamExt;
 use mongodb::{Collection, Database, bson::{doc, oid::ObjectId}};
 use serde::Deserialize;
@@ -112,6 +112,8 @@ pub async fn login_handler(
     let cookie = Cookie::build("speer", token)
         .secure(true)
         .http_only(true)
+        .expires(OffsetDateTime::now_utc().saturating_add(1.days()))
+        .same_site(SameSite::Strict)
         .finish();
 
     Ok(

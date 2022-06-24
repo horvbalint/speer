@@ -31,10 +31,10 @@ impl FromRequest for User {
         let env_vars = req.app_data::<Data<EnvVars>>().unwrap();
         let cookie_secret = env_vars.cookie_secret.clone();
         let cookie = req.cookie("speer");
-        let db = req.app_data::<Data<Database>>().unwrap().clone();
+        let db = req.app_data::<Data<Database>>().unwrap();
+        let collection = db.collection::<User>("users"); 
 
         Box::pin(async move {
-            let collection = db.collection::<User>("users"); 
             process_req_auth_data(collection, cookie, cookie_secret).await
         })
     }
@@ -68,9 +68,13 @@ async fn process_req_auth_data(collection: Collection<User>, cookie: Option<Cook
     let id = ObjectId::parse_str(decoded_token.claims.id.as_str())
         .map_err(|_| ErrorUnauthorized("You are not logged in"))?;
 
-    collection.find_one(doc! {"_id": id}, None).await
+    let user = collection.find_one(doc! {"_id": id}, None).await
         .map_err(|_| ErrorUnauthorized("You are not logged in"))?
-        .ok_or_else(|| ErrorUnauthorized("You are not logged in"))
+        .ok_or_else(|| ErrorUnauthorized("You are not logged in"))?;
+
+    if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }
+
+    Ok(user)
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
