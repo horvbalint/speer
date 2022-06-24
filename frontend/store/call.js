@@ -15,15 +15,22 @@ export const state = () => ({
     },
   },
   constraints: {
-    video: {
-      height: { max: 1080 },
-      frameRate: { max: 25 },
+    video: { 
+      input: {
+        height: { max: 1080 },
+        frameRate: { max: 25 },
+      },
+      output: {}
     },
-    audio: {
-      echoCancellation: true,
-      noiseSuppression: true,
+    audio: { 
+      input: {
+        echoCancellation: true,
+        noiseSuppression: true,
+      },
+      output: {}
     }
   },
+  audioOutputDevice: null,
 })
 
 export const getters = {
@@ -53,13 +60,19 @@ export const mutations = {
     state.tracks.video.main = null
     state.tracks.video.screen = null
     state.constraints = {
-      video: {
-        height: { max: 1080 },
-        frameRate: { max: 25 },
+      video: { 
+        input: {
+          height: { max: 1080 },
+          frameRate: { max: 25 },
+        },
+        output: {}
       },
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
+      audio: { 
+        input: {
+          echoCancellation: true,
+          noiseSuppression: true,
+        },
+        output: {}
       }
     }
   },
@@ -71,6 +84,9 @@ export const mutations = {
   },
   setIsFullScreen(state, value) {
     state.isFullScreen = value
+  },
+  setAudioOutputDevice(state, value) {
+    state.audioOutputDevice = value
   }
 }
 
@@ -361,30 +377,32 @@ export const actions = {
     }
   },
   setConstraints(ctx, constraints) {
-    let selectedNewAudioDevice = constraints.audio.deviceId != ctx.state.constraints.audio.deviceId
-    let selectedNewVideoDevice = constraints.video.deviceId != ctx.state.constraints.video.deviceId
+    let selectedNewAudioInputDevice = constraints.audio.input.deviceId != ctx.state.constraints.audio.input.deviceId
+    let selectedNewVideoInputDevice = constraints.video.input.deviceId != ctx.state.constraints.video.input.deviceId
+    
     ctx.commit('setConstraints', constraints)
+    ctx.commit('setAudioOutputDevice', constraints.audio.output.deviceId)
 
     if(ctx.state.tracks.audio.main) {
-      if(selectedNewAudioDevice) {
+      if(selectedNewAudioInputDevice) {
         ctx.dispatch('muteAudio')
         setTimeout( () => ctx.dispatch('unmuteAudio'), 100)
       }
       else
-        ctx.state.tracks.audio.main.applyConstraints(constraints.audio)
+        ctx.state.tracks.audio.main.applyConstraints(constraints.audio.input)
     }
   
     if(ctx.state.tracks.video.main) {
-      if(selectedNewVideoDevice) {
+      if(selectedNewVideoInputDevice) {
         ctx.dispatch('disableVideo')
         setTimeout( () => ctx.dispatch('enableVideo'), 100)
       }
       else
-        ctx.state.tracks.video.main.applyConstraints(constraints.video)
+        ctx.state.tracks.video.main.applyConstraints(constraints.video.input)
     }
 
     if(ctx.state.tracks.video.screen)
-      ctx.state.tracks.video.screen.applyConstraints(constraints.video)
+      ctx.state.tracks.video.screen.applyConstraints(constraints.video.input)
   },
   setIsFullScreen(ctx, value) {
     ctx.commit('setIsFullScreen', value)

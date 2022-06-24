@@ -1,11 +1,31 @@
 {
+  "2.9.16": {
+    "title": "Polishes and fixes",
+    "changes": [
+      "Whitespace is no longer removed from the start of the lines of multi-line messages",
+      "The 'drop file here' overlay is now always in its correct place",
+      "More small style fixes and loading speed updates"
+    ],
+    "notes": [],
+    "type": "fix"
+  },
+  "2.9.15": {
+    "title": "More call settings",
+    "changes": [
+      "Added support for changing the audio output device during calls"
+    ],
+    "notes": [
+      "This feature is only supported in Chromium based browsers out of the box. If you are using Firefox you can enable it using the 'media.setsinkid.enabled' flag."
+    ],
+    "type": "feature"
+  },
   "2.8.15": {
     "title": "Speer got Rusty",
     "changes": [
-      "The whole backend of Speer has been rewrtitten using Rust. This means better performance, security and stability."
+      "The whole backend of Speer has been rewrtitten using Rust. This means better performance, security and stability"
     ],
     "notes": [
-      "Huge amount of code was modified so expect some bugs. These are gonna be fixed as fast as possible."
+      "Huge amount of code was modified so expect some bugs. These are gonna be fixed as fast as possible"
     ],
     "type": "breaking"
   },
@@ -107,7 +127,7 @@
     "type": "fix"
   },
   "1.4.8": {
-    "title": "Polishes and updates",
+    "title": "Polishes and fixes and updates",
     "changes": [
       "One can now see a loader while Speer is connecting to a friend",
       "A new sound is playing while waiting for the call partner to respond",
@@ -135,7 +155,7 @@
     "type": "fix"
   },
   "1.3.6": {
-    "title": "Polishes and updates",
+    "title": "Polishes and fixes and updates",
     "changes": [
       "Native browser dialogs were replaced or removed",
       "App description is updated",
@@ -155,7 +175,7 @@
     "type": "feature"
   },
   "1.2.5": {
-    "title": "Polishes and updates",
+    "title": "Polishes and fixes and updates",
     "changes": [
       "There is a new pop-up forcing an update when there was a breaking change since the last use",
       "In-call settings now work as expected again",

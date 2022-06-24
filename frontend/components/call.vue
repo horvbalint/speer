@@ -6,7 +6,14 @@
       <p v-if="!choosenPartnerCall.remoteStream">Waiting for {{choosenPartner.username}} to response...</p>
       <p v-else>{{ currentDuration }}</p>
     </div>
-    <video v-else :srcObject.prop="choosenPartnerCall.remoteStream" class="video" autoplay/>
+
+    <video
+      ref="video"
+      v-show="choosenPartnerCall.hasRemoteVideo"
+      :srcObject.prop="choosenPartnerCall.remoteStream"
+      class="video"
+      autoplay
+    />
 
     <div class="videoThumbnails">
       <!-- <div v-for="partner in this.$store.state.call.partners" :key="partner._id" class="thumbnail" :class="{choosen: choosenPartnerCall == $store.state.partners[partner._id].call}">
@@ -84,24 +91,26 @@ export default {
       currentDuration: '00:00',
       canScreenShare: false,
       choosenPartner: null,
+      choosenPartnerCall: null,
       sources: {
-        audio: [],
-        video: [],
-      },
+        audio: {
+          input: [],
+          output: []
+        },
+        video: {
+          input: [],
+          output: []
+        },
+      }
     }
   },
   computed: {
-    choosenPartnerCall() {
-      if(!this.choosenPartner) return null
-
-      return this.$store.state.partners[this.choosenPartner._id].call
-    },
     hasLocalVideo() {
       return !!this.$store.state.call.tracks.video.main || !!this.$store.state.call.tracks.video.screen
     }
   },
   created() {
-    this.choosenPartner = this.$store.state.call.partners[0]
+    this.setChoosenPartner(this.$store.state.call.partners[0])
 
     if(navigator.mediaDevices.getDisplayMedia)
       this.canScreenShare = true
@@ -110,13 +119,47 @@ export default {
     .then( devices => {
       for(let device of devices) {
         switch(device.kind) {
-          case 'audioinput':  this.sources.audio.push(device); break;
-          case 'videoinput':  this.sources.video.push(device); break;
+          case 'audioinput':  this.sources.audio.input.push(device); break;
+          case 'audiooutput': this.sources.audio.output.push(device); break;
+          case 'videoinput':  this.sources.video.input.push(device); break;
         }
       }
     })
   },
+  mounted() {
+    if(this.$store.state.call.audioOutputDevice) {
+      if(this.$refs.video)
+        this.$refs.video.setSinkId(this.$store.state.call.audioOutputDevice)
+
+      if(this.$refs.secondAudio)
+        this.$refs.secondAudio.setSinkId(this.$store.state.call.audioOutputDevice)
+    }
+  },
   methods: {
+    setChoosenPartner(partner) {
+      this.choosenPartner = partner
+      this.choosenPartnerCall = this.$store.state.partners[this.choosenPartner._id].call
+
+      this.handleChoosenPartnerStream()
+    },
+    handleChoosenPartnerStream() {
+      if(!this.choosenPartnerCall.remoteStream) return
+
+      if(!this.timeOut)
+        this.timeOut = setInterval(this.calculateCallDuration, 1000)
+
+      this.choosenPartnerCall.remoteStream.addEventListener('addtrack', ({track}) => {
+        if(this.choosenPartnerCall.remoteStream.getAudioTracks().length < 2) return
+
+        this.$refs.secondAudio.srcObject = new MediaStream([track])
+      })
+
+      this.choosenPartnerCall.remoteStream.addEventListener('removetrack', () => {
+        if(!this.$refs.secondAudio) return
+
+        this.$refs.secondAudio.srcObject = null
+      })
+    },
     requestFullScreen() {
       let promise = this.$refs.call.requestFullscreen ?  this.$refs.call.requestFullscreen() : this.$refs.call.webkitRequestFullscreen()
 
@@ -152,23 +195,17 @@ export default {
   },
   watch: {
     'choosenPartnerCall.remoteStream': function() {
-      if(!this.choosenPartnerCall.remoteStream) return
-
-      if(!this.timeOut)
-        this.timeOut = setInterval(this.calculateCallDuration, 1000)
-
-      this.choosenPartnerCall.remoteStream.addEventListener('addtrack', ({track}) => {
-        if(this.choosenPartnerCall.remoteStream.getAudioTracks().length < 2) return
-
-        this.$refs.secondAudio.srcObject = new MediaStream([track])
-      })
-
-      this.choosenPartnerCall.remoteStream.addEventListener('removetrack', () => {
-        if(!this.$refs.secondAudio) return
-
-        this.$refs.secondAudio.srcObject = null
-      })
+      this.handleChoosenPartnerStream()
     },
+    '$store.state.call.audioOutputDevice': function() {
+      if(this.$store.state.call.audioOutputDevice) {
+        if(this.$refs.video)
+          this.$refs.video.setSinkId(this.$store.state.call.audioOutputDevice)
+
+        if(this.$refs.secondAudio)
+          this.$refs.secondAudio.setSinkId(this.$store.state.call.audioOutputDevice)
+      }
+    }
   },
   beforeDestroy() {
     if(this.timeOut) clearInterval(this.timeOut)

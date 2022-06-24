@@ -1,6 +1,6 @@
 {
   "name": "speer",
-  "version": "2.8.15",
+  "version": "2.9.16",
   "license": "GPL-3.0-or-later",
   "author": "horvbalint",
   "scripts": {
@@ -14,28 +14,28 @@
     "doc": "cd backend && cargo doc --open"
   },
   "dependencies": {
-    "@nuxtjs/axios": "^5.13.1",
+    "@nuxtjs/axios": "^5.13.6",
     "@nuxtjs/pwa": "^3.3.5",
     "bcrypt": "^5.0.1",
-    "body-parser": "^1.19.0",
+    "body-parser": "^1.20.0",
     "compression": "^1.7.4",
-    "cookie-session": "^1.4.0",
+    "cookie-session": "^2.0.0",
     "cors": "^2.8.5",
     "escape-html": "^1.0.3",
-    "express": "^4.17.1",
-    "helmet": "^4.4.1",
+    "express": "^4.18.1",
+    "helmet": "^5.1.0",
     "jwt-encode": "^1.0.1",
-    "mongoose": "^5.12.0",
-    "multer": "^1.4.2",
-    "node-mailjet": "^3.3.4",
-    "nuxt": "^2.15.4",
-    "passport": "^0.4.1",
+    "mongoose": "^6.3.6",
+    "multer": "^1.4.5-lts.1",
+    "node-mailjet": "^3.4.1",
+    "nuxt": "^2.15.8",
+    "passport": "^0.6.0",
     "passport-local": "^1.0.0",
-    "sharp": "^0.28.1",
-    "simple-peer": "^9.7.2",
-    "streamsaver": "^2.0.5",
-    "web-push": "^3.4.4",
-    "web-streams-polyfill": "^3.1.0",
-    "ws": "^7.3.1"
+    "sharp": "^0.30.6",
+    "simple-peer": "^9.11.1",
+    "streamsaver": "^2.0.6",
+    "web-push": "^3.5.0",
+    "web-streams-polyfill": "^3.2.1",
+    "ws": "^8.7.0"
   }
 }

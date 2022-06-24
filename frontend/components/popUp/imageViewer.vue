@@ -42,9 +42,9 @@ export default {
         this.openImg()
     },
     getFileSize(size) {
-      if(size < 1_000_000) return `${(size/1_000).toFixed(2)} KB`
-      if(size < 1_000_000_000) return `${(size/1_000_000).toFixed(2)} MB`
-      return `${(size/1_000_000_000).toFixed(2)} GB`
+      if(size < 1000000) return `${(size/1000).toFixed(2)} KB`
+      if(size < 1000000000) return `${(size/1000000).toFixed(2)} MB`
+      return `${(size/1000000000).toFixed(2)} GB`
     }
   },
   beforeDestroy() {
