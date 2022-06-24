@@ -24,7 +24,7 @@ struct SingalMessage {
     data: Option<String>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 struct PusherMessage {
     action: String,
     event: String,
@@ -80,11 +80,11 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Connection {
                 match serde_json::from_str(&text) {
                     Ok(Message::Signal(msg)) => self.handle_signal_msg(msg),
                     Ok(Message::Pusher(msg)) => self.handle_pusher_msg(msg),
-                    _ => {}
+                    _ => {println!("Unkown 'text' message: {:?}", &text)}
                 }
             },
             Ok(ws::Message::Close(_)) => ctx.stop(),
-            _ => (),
+            _ => {println!("Unkown message: {:?}", msg)},
         }
     }
 }
@@ -140,7 +140,7 @@ impl Connection {
                     _id: self.user._id
                 })
             },
-            _ => {}
+            _ => {println!("Unkown pusher action in message: {:?}", &msg)}
         }
     }
 

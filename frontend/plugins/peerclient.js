@@ -111,7 +111,7 @@ export default class PeerClient {
         remoteId: remoteId,
         peerData: JSON.stringify(peerData),
         type,
-        data,
+        data: JSON.stringify(data),
       })
     })
     

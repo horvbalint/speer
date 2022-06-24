@@ -116,17 +116,19 @@ export default {
       },
     }))
 
-    navigator.serviceWorker.addEventListener('message', this.handleSWMessage)
-    navigator.serviceWorker.getRegistration()
-      .then( registration => {
-        if(registration && registration.active) {
-          this.swRegistration = registration
-          this.swRegistration.active.postMessage({action: 'ready-to-receive'})
-
-          window.addEventListener('beforeunload', this.disconnectFromSw)
-        }
-      })
-      .catch(err => console.error('COULD NOT GET REGISTRATION', err) )
+    if(navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', this.handleSWMessage)
+      navigator.serviceWorker.getRegistration()
+        .then( registration => {
+          if(registration && registration.active) {
+            this.swRegistration = registration
+            this.swRegistration.active.postMessage({action: 'ready-to-receive'})
+  
+            window.addEventListener('beforeunload', this.disconnectFromSw)
+          }
+        })
+        .catch(err => console.error('COULD NOT GET REGISTRATION', err) )
+    }
 
     this.$axios.$get(`/breaking/${this.version}`)
       .then( wasBreaking => {
@@ -213,7 +215,9 @@ export default {
     window.removeEventListener('beforeunload', this.disconnectFromSw)
     window.removeEventListener('beforeinstallprompt', this.saveBeforeInstallPrompt)
     window.removeEventListener('resize', this.handleResize)
-    navigator.serviceWorker.removeEventListener('message', this.handleSWMessage)
+
+    if(navigator.serviceWorker)
+      navigator.serviceWorker.removeEventListener('message', this.handleSWMessage)
 
     if(this.$store.state.sideBarDrag)
       this.$store.state.sideBarDrag.stop()
