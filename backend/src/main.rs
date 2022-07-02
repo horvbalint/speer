@@ -33,7 +33,7 @@ pub struct EnvVars {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().unwrap();
+    dotenv().expect("\n\nNo '.env' file can be found in the current working directory. Check if the file exists in the current working directory.\nYou can find information about the file in the documentation: https://github.com/horvbalint/speer#backendenv\n\n");
     env_logger::init();
 
     let client_options = ClientOptions::parse("mongodb://localhost:27017/").await.unwrap();

@@ -11,6 +11,7 @@
     "server": "cd backend && mold -run cargo watch -q -c -w src/ -x run",
     "prod-server": "cd backend && cargo run --release",
     "build-server": "cd backend && cargo build --release",
+    "docker-build": "cd backend && sudo docker run --rm --user \"$(id -u)\":\"$(id -g)\" -v \"$PWD\":$PWD -w $PWD rust:1.61.0 cargo build --release",
     "doc": "cd backend && cargo doc --open"
   },
   "dependencies": {
