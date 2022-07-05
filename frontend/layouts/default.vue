@@ -17,19 +17,20 @@
     </transition>
 
     <transition name="pop">
-      <CallPopUp v-if="$store.state.popUp.call"></CallPopUp>
+      <BreakingChangePopUp v-if="showBreakingPopUp"/>
+      <CallPopUp v-else-if="$store.state.popUp.call"></CallPopUp>
       <ImageViewer v-else-if="$store.state.popUp.images.length"/>
       <VideoViewer v-else-if="$store.state.popUp.video"/>
       <FilePopUp v-else-if="$store.state.popUp.file"></FilePopUp>
       <PingPopUp v-else-if="$store.state.popUp.ping"></PingPopUp>
       <RequestPopUp v-else-if="$store.state.requests.length"/>
+      <ImageCropperPopUp v-else-if="$store.state.popUp.imageCropper"/>
       <ProfilePopUp v-else-if="$store.state.popUp.profile"/>
       <AddFriendsPopUp v-else-if="$store.state.popUp.addFriends"/>
       <NotificationPopUp v-else-if="$store.state.popUp.notification"/>
       <FilesToConfirmPopUp v-else-if="$store.state.popUp.filesToConfirm"/>
       <ChangelogPopUp v-else-if="$store.state.popUp.changelog"/>
       <FeedbackPopUp v-else-if="$store.state.popUp.feedback"/>
-      <BreakingChangePopUp v-else-if="showBreakingPopUp"/>
     </transition>
 
     <Alert/>
@@ -41,6 +42,7 @@ import SideBar from '~/components/sideBar'
 import Alert from '~/components/popUp/alert'
 import AddFriendsPopUp from '~/components/popUp/addFriends'
 import ProfilePopUp from '~/components/popUp/profile'
+import ImageCropperPopUp from '~/components/popUp/imageCropper'
 import RequestPopUp from '~/components/popUp/requests'
 import PingPopUp from '~/components/popUp/ping'
 import CallPopUp from '~/components/popUp/call'
@@ -234,6 +236,7 @@ export default {
     ChangelogPopUp,
     FeedbackPopUp,
     BreakingChangePopUp,
+    ImageCropperPopUp,
   }
 }
 </script>

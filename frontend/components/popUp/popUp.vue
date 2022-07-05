@@ -2,7 +2,7 @@
   <div class="popUp">
     <div class="topper" @click="handleTopperClick()" ref="topper"></div>
 
-    <div class="pop-up" ref="popUp" :class="{withButtons: buttons && buttons.length}">
+    <div class="pop-up" ref="popUp" :class="{withButtons: buttons.length, maximized}">
       <div ref="header" class="title" v-if="title">
         <h3>{{title}}</h3>
         <hr>
@@ -34,7 +34,10 @@ export default {
   props: {
     title: String,
     icon: String,
-    buttons: Array,
+    buttons: {
+      type: Array,
+      default: [],
+    },
     closeWithSwipe: {
       type: Boolean,
       default: true
@@ -42,6 +45,10 @@ export default {
     closeWithTopper: {
       type: Boolean,
       default: true
+    },
+    maximized: {
+      type: Boolean,
+      default: false,
     }
   },
   data() {
@@ -142,6 +149,12 @@ export default {
     transform: translate(-50%, -50%);
     z-index: 2;
   }
+  .maximized {
+    width: 60%;
+    height: 80%;
+
+    max-width: none;
+  }
   .title {
     background: var(--bg-color);
     display: flex;
@@ -166,6 +179,7 @@ export default {
   .content {
     overflow: auto;
     padding: 0 10px;
+    flex: 1;
     /* margin-bottom: -54px; */
     /* padding-bottom: 54px */
   }

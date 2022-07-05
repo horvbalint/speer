@@ -68,8 +68,17 @@ export default {
     changeAvatar() {
       if(!this.$refs.file.files[0]) return
 
+      this.$store.dispatch('popUp/set', {
+        popUp: 'imageCropper',
+        value: {
+          image: this.$refs.file.files[0],
+          callback: this.saveAvatar
+        }
+      })
+    },
+    saveAvatar(img) {
       let formData = new FormData()
-      formData.append('avatar', this.$refs.file.files[0])
+      formData.append('avatar', img)
 
       this.$axios.$post('/avatar', formData, {
         Headers: {'Content-Type': 'multipart/form-data'},

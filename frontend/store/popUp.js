@@ -3,6 +3,7 @@ export const strict = false
 export const state = () => ({
   addFriends: false,
   profile: false,
+  imageCropper: false,
   call: false,
   callSettings: false,
   ping: false,
@@ -19,6 +20,7 @@ export const mutations = {
   reset(state) {
     state.addFriends = false
     state.profile = false
+    state.imageCropper = false
     state.call = false
     state.callSettings = false
     state.ping = false
