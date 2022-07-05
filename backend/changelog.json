@@ -1,4 +1,12 @@
 {
+  "2.10.16": {
+    "title": "Be precise",
+    "changes": [
+      "A new step was introduced where you can crop the choosen image before uploading it as a profile picture."
+    ],
+    "notes": [],
+    "type": "feature"
+  },
   "2.9.16": {
     "title": "Polishes and fixes",
     "changes": [
