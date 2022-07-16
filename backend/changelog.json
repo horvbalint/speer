@@ -1,4 +1,12 @@
 {
+  "3.10.16": {
+    "title": "Move things faster",
+    "changes": [
+      "File sending received a big rework making it faster and the code cleaner"
+    ],
+    "notes": [],
+    "type": "breaking"
+  },
   "2.10.16": {
     "title": "Be precise",
     "changes": [
