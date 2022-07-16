@@ -362,7 +362,6 @@ export default {
   position: relative;
   display: flex;
   flex-direction: column;
-  height: 100vh;
 }
 .header {
   display: flex;

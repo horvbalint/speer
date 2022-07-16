@@ -10,7 +10,7 @@
         <div class="border" ref="border"></div>
       </div>
       <label for="file">Click to change avatar (max 20MB)</label>
-      <input id="file" type="file" hidden ref="file" @change="changeAvatar()">
+      <input id="file" type="file" hidden ref="file" accept="image/*" @change="changeAvatar()">
     </div>
     
     <div class="devices">

@@ -90,7 +90,7 @@ export default class PeerClient {
 
   _createPeerForSignaling(remoteId, type, initiator) {
     let peer = new Peer({initiator, trickle: true})
-
+    
     peer.on('signal', peerData => {
       this._send({
         action: 'signal',
@@ -206,20 +206,21 @@ class FileConnection {
     this.peer.on('error', this._handleChannelError.bind(this))
     this.peer._onChannelClose = () => this.onClose() // TODO: Use the "close" event
 
-    this.bindedWaitForRecvAck = this._waitForRecvAck.bind(this)
-    this.bindedCheckIncomingChunk = this._checkIncomingChunk.bind(this)
     this.bindedSendConfigCheck = this._sendConfigCheck.bind(this)
     this.bindedRequestConfigCheck = this._requestConfigCheck.bind(this)
+    this.bindedSendFileChunks = this._sendFileChunks.bind(this)
 
-    this.ackPayload = new TextEncoder().encode("speer_ack")
+    this.percentCallBackFreq = 10
 
-    this._resetSend()
-    this._resetRecv()
+    this._initRecv()
   }
-
+  
   async send(file = null, callback) {
     return new Promise( (resolve, reject) => {
       if(this.isSending) return reject('ERROR: Sending in progress')
+      
+      this.peer.off('data', this.bindedRequestConfigCheck)
+      this._initSend()
 
       this.isSending = true
       this.sendProperties.resolve = resolve
@@ -231,6 +232,7 @@ class FileConnection {
       this.peer.send(JSON.stringify({
         speer: 1,
         type: 'request',
+        chunkCount: this.sendProperties.chunkCount,
         data: {
           name: file.name,
           size: file.size,
@@ -246,7 +248,7 @@ class FileConnection {
 
   _handleRequest(data) {
     this.recvProperties.file = data.data
-    this.recvProperties.chunkCount = Math.ceil(this.recvProperties.file.size/this.recvProperties.chunkSize)
+    this.recvProperties.chunkCount = data.chunkCount
     this.recvProperties.chunkIndex = 0
 
     const request = new FileSendRequest(this.recvProperties.file)
@@ -259,6 +261,7 @@ class FileConnection {
             data: 'decline',
           }))
 
+        this.peer.off('data', this.bindedSendConfigCheck)
         this.isReceiving = true
         this.recvProperties.percentCallback = callback
         this._waitForFile()
@@ -274,8 +277,11 @@ class FileConnection {
   }
 
   _handleRequestAnswer(data) {
-    if(data.data == 'accept')
+    if(data.data == 'accept') {
+      this.peer._channel.bufferedAmountLowThreshold = this.sendProperties.chunkSize * this.sendProperties.chunkCountInBatch * 0.3
+      this.peer._channel.addEventListener('bufferedamountlow', this.bindedSendFileChunks)
       this._sendFile()
+    }
     else {
       this.onDecline()
       this.isSending = false
@@ -283,20 +289,11 @@ class FileConnection {
     }
   }
 
-  _waitForRecvAck(data) {
-    if(
-      this._isAckPayload(data) &&
-      this.sendProperties.chunkIndex%this.sendProperties.chunkCountInBatch == 0
-    ) {
-      this._sendFileChunks()
-    }
-  }
-
   async _sendFile() {
     this.peer.off('data', this.bindedSendConfigCheck)
 
     console.time('file sending')
-    this.peer.on('data', this.bindedWaitForRecvAck)
+
     this._sendFileChunks()
   }
 
@@ -309,73 +306,70 @@ class FileConnection {
     else
       this.bindedOnData = this._emitChunks.bind(this)
 
-    this.peer.on('data', this.bindedCheckIncomingChunk)
-  }
-
-  _checkIncomingChunk(data) {
-    if(
-      !this._isAckPayload(data) ||
-      this.sendProperties.chunkIndex%this.sendProperties.chunkCountInBatch != 0
-    ) {
-      this.bindedOnData(data)
-    }
+    this.peer.on('data', this.bindedOnData)
+    console.time('file receiving')
   }
 
   async _sendFileChunks() {
-    this.sendProperties.percentCallback(this.sendProperties.chunkIndex/this.sendProperties.chunkCount)
+    const startIndex = this.sendProperties.chunkIndex * this.sendProperties.chunkSize
+    this.sendProperties.buffer = await this.sendProperties.file.slice(startIndex, startIndex+this.sendProperties.chunkSize*this.sendProperties.chunkCountInBatch).arrayBuffer()
 
-    const startIndex = this.sendProperties.chunkIndex*this.sendProperties.chunkSize
-    const batchLength = this.sendProperties.chunkCountInBatch*this.sendProperties.chunkSize
-    const buffer = await this.sendProperties.file.slice(startIndex, startIndex+batchLength).arrayBuffer()
-
-    for(let start=0; start<buffer.byteLength; start+=this.sendProperties.chunkSize) {
-      this.peer.send(buffer.slice(start, start+this.sendProperties.chunkSize))
+    for(let start=0; start<this.sendProperties.buffer.byteLength; start+=this.sendProperties.chunkSize) {
+      this.peer.send(this.sendProperties.buffer.slice(start, start+this.sendProperties.chunkSize))
       ++this.sendProperties.chunkIndex
     }
-
+    
+    this.sendProperties.percentCallback(this.sendProperties.chunkIndex/this.sendProperties.chunkCount)
+    
     if(this.sendProperties.chunkIndex == this.sendProperties.chunkCount) {
       console.timeEnd('file sending')
-      this.sendProperties.percentCallback(this.sendProperties.chunkIndex/this.sendProperties.chunkCount)
       this.sendProperties.resolve()
-      this._resetSend()
+      this.sendProperties.percentCallback(1)
+      this._initSend()
+      this._initRecv()
     }
   }
 
   _accumulateChunks(chunk) {
-    this.recvProperties.fileBuffer.push(chunk)
     ++this.recvProperties.chunkIndex
     
-    if(this.recvProperties.chunkIndex%this.recvProperties.chunkCountInBatch == 0) {
-      this.peer.send(this.ackPayload)
+    if(this.recvProperties.chunkIndex % this.percentCallBackFreq == 0)
       this.recvProperties.percentCallback(this.recvProperties.chunkIndex/this.recvProperties.chunkCount)
-    }
 
+    this.recvProperties.fileBuffer.push(chunk)
+    
     if(this.recvProperties.chunkCount == this.recvProperties.chunkIndex) {
-      this.recvProperties.percentCallback(this.recvProperties.chunkIndex/this.recvProperties.chunkCount)
+      console.timeEnd('file receiving')
+
       this.onReceive(new File(this.recvProperties.fileBuffer, this.recvProperties.file.name, this.recvProperties.file))
-      this._resetRecv()
+      this.recvProperties.percentCallback(1)
+
+      this._initRecv()
     }
   }
 
   _emitChunks(chunk) {
-    this.onReceive(chunk)
     ++this.recvProperties.chunkIndex
     
-    if(this.recvProperties.chunkIndex%this.recvProperties.chunkCountInBatch == 0) {
-      this.peer.send(this.ackPayload)
+    if(this.recvProperties.chunkIndex % this.percentCallBackFreq == 0)
       this.recvProperties.percentCallback(this.recvProperties.chunkIndex/this.recvProperties.chunkCount)
-    }
 
+    this.onReceive(chunk)
+    
     if(this.recvProperties.chunkCount == this.recvProperties.chunkIndex) {
-      this.recvProperties.percentCallback(this.recvProperties.chunkIndex/this.recvProperties.chunkCount)
+      console.timeEnd('file receiving')
+
       this.onReceive(new Uint8Array())
-      this._resetRecv()
+      this.recvProperties.percentCallback(1)
+
+      this._initRecv()
     }
   }
 
-  _resetSend() {
-    this.peer.off('data', this.bindedWaitForRecvAck)
+  _initSend() {
     this.peer.off('data', this.bindedSendConfigCheck)
+
+    this.peer._channel.removeEventListener('bufferedamountlow', this.bindedSendFileChunks)
 
     this.sendProperties = {
       resolve: null,
@@ -383,7 +377,7 @@ class FileConnection {
       percentCallback: null,
       chunkCount: 0,
       chunkIndex: 0,
-      chunkSize: 25*1024,
+      chunkSize: 64*1024,
       chunkCountInBatch: 100,
     }
 
@@ -391,10 +385,13 @@ class FileConnection {
     this.isSending = false
   }
 
-  _resetRecv() {
-    this.peer.off('data', this.bindedCheckIncomingChunk)
+  _initRecv() {
     this.peer.off('data', this.bindedRequestConfigCheck)
-    this.bindedOnData = null
+
+    if(this.bindedOnData) {
+      this.peer.off('data', this.bindedOnData)
+      this.bindedOnData = null
+    }
 
     this.recvProperties = {
       file: null,
@@ -403,8 +400,6 @@ class FileConnection {
       chunkIndex: 0,
       fileBuffer: [],
       mode: 'emit',
-      chunkSize: 25*1024,
-      chunkCountInBatch: 100,
     }
 
     this.peer.on('data', this.bindedRequestConfigCheck)
@@ -412,33 +407,19 @@ class FileConnection {
   }
 
   _sendConfigCheck(data) {
-    if(data[0] !== 123) return
+    data = JSON.parse(data)
 
-    try {
-      data = JSON.parse(data)
-      if(data.speer && data.type == 'answer')
-        this._handleRequestAnswer(data)
-    } catch(err) {}
+    if(data.speer && data.type == 'answer') {
+      this._handleRequestAnswer(data)
+    }
   }
 
   _requestConfigCheck(data) {
-    if(data[0] !== 123) return
+    data = JSON.parse(data)
 
-    try {
-      data = JSON.parse(data)
-      if(data.speer && data.type == 'request')
-        this._handleRequest(data)
-    } catch(err) {}
-  }
-
-  _isAckPayload(data) {
-    if(data.byteLength != this.ackPayload.byteLength) return false
-
-    for(let i=0; i<this.ackPayload.byteLength; ++i) {
-      if(data[i] != this.ackPayload[i]) return false
+    if(data.speer && data.type == 'request') {
+      this._handleRequest(data)
     }
-
-    return true
   }
 
   _handleChannelError(error) {

@@ -36,7 +36,7 @@ export default {
     icon: String,
     buttons: {
       type: Array,
-      default: [],
+      default: () => [],
     },
     closeWithSwipe: {
       type: Boolean,
