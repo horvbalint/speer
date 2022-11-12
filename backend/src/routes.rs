@@ -1,11 +1,12 @@
 use actix::Addr;
-use actix_web::{HttpResponse, Responder, error::*, get, http::StatusCode, post, web::{Path, Json, Data}, cookie::{Cookie, SameSite, time::{OffsetDateTime, ext::NumericalDuration}}, HttpRequest, delete};
+use actix_identity::Identity;
+use actix_web::{Responder, error::*, get, post, web::{Path, Json, Data}, HttpRequest, delete, HttpMessage};
 use futures::TryStreamExt;
 use mongodb::{Collection, Database, bson::{doc, oid::ObjectId}};
 use serde::Deserialize;
 use serde_json::{Map as SerdeMap, Value as SerdeValue};
 use jsonwebtoken::{encode, Header, EncodingKey};
-use std::{time::{SystemTime, UNIX_EPOCH}, str::FromStr, fs};
+use std::{str::FromStr, fs};
 use std::path::PathBuf;
 use actix_files::NamedFile;
 use image::imageops::FilterType;
@@ -15,7 +16,6 @@ use crate::{CurrDir, ws::{Server, ConnectedIds, Dispatch}, EnvVars, schemas::{De
 use crate::schemas::{User, MinimalUser, MeUser};
 use crate::mail;
 use crate::schemas::Confirm;
-use crate::jwt::Jwt;
 use crate::utils;
 
 extern crate bcrypt;
@@ -66,7 +66,7 @@ pub async fn register_handler(
     };
     let insert_result = users_coll.insert_one(&user, None).await
         .map_err(|_| ErrorInternalServerError("Failed to create user"))?;
-        
+
     let inserted_id = insert_result.inserted_id.as_object_id().unwrap().to_string();
     let token = encode(&Header::default(), &inserted_id, &EncodingKey::from_secret(env_vars.confirm_secret.as_ref()))
         .map_err(|_| ErrorInternalServerError(""))?;
@@ -87,9 +87,9 @@ pub async fn register_handler(
 
 #[post("/login")]
 pub async fn login_handler(
+    request: HttpRequest,
     credentials: Json<LoginBody>,
     users_coll: Data<Collection<User>>,
-    env_vars: Data<EnvVars>
 ) -> Result<impl Responder, Error> {
     let filter = doc!{"email": &credentials.email};
 
@@ -104,35 +104,17 @@ pub async fn login_handler(
     if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }
     if !user.confirmed { return Err(ErrorUnauthorized("Email not confirmed")) }
 
-    let current_utc = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
-    let token_claims = Jwt::new(user._id, current_utc + (24 * 60 * 60));
-    let token = encode(&Header::default(), &token_claims, &EncodingKey::from_secret(env_vars.cookie_secret.as_ref()))
-        .map_err(|_| ErrorInternalServerError(""))?;
+    Identity::login(&request.extensions(), user._id.to_hex())
+      .map_err(|_| ErrorInternalServerError(""))?;
 
-    let cookie = Cookie::build("speer", token)
-        .secure(true)
-        .http_only(true)
-        .expires(OffsetDateTime::now_utc().saturating_add(1.days()))
-        .same_site(SameSite::Strict)
-        .finish();
-
-    Ok(
-        HttpResponse::build(StatusCode::OK)
-            .cookie(cookie)
-            .body("Logged in")
-    )
+    Ok("")
 }
 
 #[post("/logout")]
-pub async fn logout_handler(req: HttpRequest) -> Result<impl Responder, Error> {
-    let mut response = HttpResponse::build(StatusCode::OK).finish();
+pub async fn logout_handler(identity: Identity) -> Result<impl Responder, Error> {
+  identity.logout();
 
-    if let Some(ref cookie) = req.cookie("speer") {
-        response.add_removal_cookie(cookie)
-            .map_err(|_| ErrorInternalServerError("Failed to remove cookie"))?;
-    }
-    
-    Ok(response)
+  Ok("")
 }
 
 #[post("/confirm/{token}")]
@@ -200,11 +182,11 @@ pub async fn resend_confirmation_handler(
         "confirmed": false,
         "deleted": false
     };
-    
+
     let user = users_coll.find_one(filter, None).await
         .map_err(|_| ErrorBadRequest("Invalid email"))?
         .ok_or_else(|| ErrorBadRequest("Invalid email"))?;
-    
+
     let filter = doc!{"user": user._id};
     let confirm = confirms_coll.find_one(filter, None).await
         .map_err(|_| ErrorBadRequest("Failed to resend email"))?
@@ -248,7 +230,7 @@ pub async fn avatar_handler(
     let update = doc!{"$set": {"avatar": &full_file_name}};
     users_coll.update_one(filter, update, None).await
         .map_err(|_| ErrorInternalServerError("Could not update user profile"))?;
-        
+
     fs::remove_file(tmp_path).ok();
     if user.avatar != "avatar.jpg" {
         let path = PathBuf::from(format!("{}/{}", files_path, user.avatar));
@@ -384,7 +366,7 @@ pub async fn request_id_handler(
     let update = doc!{"$addToSet": {"requests": user._id}};
     users_coll.update_one(filter, update, None).await
         .map_err(|_| ErrorInternalServerError(""))?;
-   
+
     tokio::spawn(async move {
         let event = Dispatch {
             event: "request".to_string(),
@@ -402,7 +384,7 @@ pub async fn request_id_handler(
         let body = user.email;
         utils::send_push_notifications(&users_coll, req_user._id, req_user.devices, title, body).await;
     });
-        
+
     Ok("")
 }
 
@@ -453,7 +435,7 @@ pub async fn accept_id_handler(
     let update = doc! {"$addToSet": {"friends": user._id}};
     users_coll.update_one(filter, update, None).await
         .map_err(|_| ErrorInternalServerError(""))?;
-        
+
     tokio::spawn(async move {
         let event = Dispatch {
             event: "friend".to_string(),
@@ -465,7 +447,7 @@ pub async fn accept_id_handler(
             },
             filter: vec![id]
         };
-        
+
         ws_addr.send(event).await.ok();
 
         let filter = doc! {"_id": id};
@@ -552,7 +534,7 @@ pub async fn test_devices_handler(
     let title = "Test notification!".to_string();
     let body = "This device is set up properly 🚀".to_string();
     utils::send_push_notifications(&users_coll, user._id, user.devices, title, body).await;
-    
+
     let filter = doc!{"_id": user._id};
     let remaining_devices = users_coll.find_one(filter, None).await
         .map_err(|_| ErrorInternalServerError(""))?
@@ -577,7 +559,7 @@ pub async fn ping_handler(
         .map_err(|_| ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorInternalServerError(""))?
         .devices;
-   
+
     let title = format!("'{}' pinged you!", user.username);
     let body = if !ping.message.is_empty() {
         ping.message.graphemes(true).take(50).collect()
@@ -670,7 +652,7 @@ pub async fn log_handler(
     let onlines = ws_addr.send(ConnectedIds).await
         .map_err(|_| ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorInternalServerError(""))?;
-    
+
     let onlines: Vec<String> = onlines.iter().map(|id| id.to_hex()).collect();
 
     println!("{:?}", onlines);
@@ -686,9 +668,9 @@ pub async fn files_handler(
 ) -> Result<impl Responder, Error> {
     let file = params.into_inner();
     let path = PathBuf::from(format!("{}/files/{}", curr_dir.path, file));
-    
+
     let res = NamedFile::open(path)
         .map_err(|_| ErrorNotFound(file))?;
-    
+
     Ok(res)
 }
