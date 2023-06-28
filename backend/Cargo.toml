@@ -31,6 +31,7 @@ web-push = "0.9.1"
 unicode-segmentation = "1.9.0"
 actix-identity = "0.5.2"
 actix-session = { version = "0.7.2", features = ["redis-actor-session"] }
+ts-rs = { path = "../../ts-rs/ts-rs", features = ["bson-oid-impl", "bson-datetime-impl"] }
 # openssl = { version = "0.10.40", features = ["vendored"] } # only needed to be able to compile to target "x86_64-unknown-linux-musl"
 
 [profile.release]

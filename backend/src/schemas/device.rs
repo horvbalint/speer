@@ -1,5 +1,6 @@
 use mongodb::bson;
 use serde::{Serialize, Deserialize};
+use ts_rs::TS;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct WebPushSubscriptionKeys {
@@ -27,7 +28,8 @@ impl Into<bson::Bson> for Device {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, TS)]
+#[ts(export)]
 pub struct MinimalDevice {
     pub name: String,
 }

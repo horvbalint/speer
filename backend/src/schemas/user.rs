@@ -4,6 +4,7 @@ use futures::{Future};
 use mongodb::{Collection, Database, bson::{doc, oid::ObjectId, serde_helpers::serialize_object_id_as_hex_string}};
 use actix_identity::Identity;
 use serde::{Serialize, Deserialize};
+use ts_rs::TS;
 
 use crate::schemas::{Device, MinimalDevice};
 
@@ -73,7 +74,8 @@ async fn process_req_auth_data(collection: Collection<User>, identity: Result<Id
     Ok(user)
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, TS)]
+#[ts(export)]
 pub struct MinimalUser {
     #[serde(serialize_with = "serialize_object_id_as_hex_string")]
     pub _id: ObjectId,
@@ -82,7 +84,8 @@ pub struct MinimalUser {
     pub avatar: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, TS)]
+#[ts(export)]
 pub struct MeUser {
     #[serde(serialize_with = "serialize_object_id_as_hex_string")]
     pub _id: ObjectId,

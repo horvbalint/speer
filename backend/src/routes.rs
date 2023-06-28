@@ -22,24 +22,11 @@ extern crate bcrypt;
 use bcrypt::{verify, hash};
 
 extern crate image;
-
-#[derive(Deserialize)]
-pub struct LoginBody {
-    email: String,
-    password: String
-}
-
 #[derive(Deserialize)]
 pub struct RegisterBody {
     email: String,
     username: String,
     password: String
-}
-
-#[derive(Deserialize)]
-pub struct PingBody {
-    id: ObjectId,
-    message: String,
 }
 
 #[post("/register")]
@@ -83,6 +70,12 @@ pub async fn register_handler(
         .map_err(|_| ErrorInternalServerError("Failed to send confirmation email"))?;
 
     Ok("")
+}
+
+#[derive(Deserialize)]
+pub struct LoginBody {
+    email: String,
+    password: String
 }
 
 #[post("/login")]
@@ -542,6 +535,12 @@ pub async fn test_devices_handler(
         .devices;
 
     Ok(Json(remaining_devices))
+}
+
+#[derive(Deserialize)]
+pub struct PingBody {
+    id: ObjectId,
+    message: String,
 }
 
 #[post("/ping")]

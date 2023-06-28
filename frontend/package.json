@@ -1,0 +1,32 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^0.39.5",
+    "@nuxt/devtools": "latest",
+    "@nuxthq/ui": "^2.4.1",
+    "@types/node": "^18",
+    "eslint": "^8.43.0",
+    "lint-staged": "^13.2.2",
+    "nuxt": "^3.6.1",
+    "nuxt-icon": "^0.4.1",
+    "sass": "^1.63.6",
+    "simple-git-hooks": "^2.8.1",
+    "typescript": "latest"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "pnpm lint-staged"
+  },
+  "lint-staged": {
+    "*": "eslint --fix"
+  }
+}

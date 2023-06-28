@@ -1,72 +1,11 @@
-<template>
-  <div class="cancel-popup">
-    <h1>Speer</h1>
-    <p>Canceling registration</p>
-    <i class="fas fa-spinner fa-pulse"/>
-  </div>
-</template>
+<script setup lang="ts">
+const route = useRoute()
 
-<script>
-export default {
-  layout: 'login',
-  data() {
-    return {
-      cancelStart: 0,
-    }
-  },
-  mounted() {
-    if(!this.$route.query.token) {
-      this.$router.push('/login')
-      return
-    }
-
-    this.cancelStart = Date.now()
-
-    this.$axios.$post(`/cancel/${this.$route.query.token}`)
-      .then( () => {
-        let delta = Date.now() - this.cancelStart
-
-        setTimeout( () => {
-          successBox("Registration canceled!", "You can register later anytime if you want")
-          this.$router.push('/login')
-        }, Math.max(1500 - delta, 0) )
-      })
-      .catch( () => {
-        let delta = Date.now() - this.cancelStart
-
-        setTimeout( () => {
-          errorBox("Cancellation failed!", "There was an error, try again later")
-          this.$router.push('/login')
-        }, Math.max(1500 - delta, 0) )
-      })
-  }
-}
+$api(`/cancel/${route.query.token}`, { method: 'post' })
+  .then(() => { navigateTo('/login') })
+  .catch(err => console.error(err))
 </script>
 
-<style scoped>
-.cancel-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  background: var(--accent-color);
-  padding: 20px;
-  border-radius: 10px;
-  width: 90%;
-  max-width: 400px;
-}
-p {
-  margin-bottom: 20px;
-  font-size: 25px;
-}
-i {
-  font-size: 30px;
-  cursor: default;
-}
-h1 {
-  text-align: center;
-  font-size: 50px;
-  margin-bottom: 30px;
-}
-</style>
+<template>
+  <h1>Canceling...</h1>
+</template>

@@ -1,8 +1,10 @@
 use serde::{Serialize, Deserialize};
 use mongodb::bson::datetime::DateTime;
+use ts_rs::TS;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase")]
+#[ts(export)]
 pub struct Feedback {
     pub description: String,
     pub steps_to_reproduce: Vec<String>,
