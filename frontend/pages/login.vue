@@ -24,6 +24,10 @@ function login() {
       <u-button class="mt-4" @click="login()">
         Login
       </u-button>
+
+      <nuxt-link to="/register">
+        or register
+      </nuxt-link>
     </div>
   </div>
 </template>
