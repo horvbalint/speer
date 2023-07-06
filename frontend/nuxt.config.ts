@@ -7,9 +7,14 @@ export default defineNuxtConfig({
     port: 9000,
   },
 
+  alias: {
+    'simple-peer': 'simple-peer/simplepeer.min.js',
+  },
+
   runtimeConfig: {
     public: {
       apiURL: 'http://localhost:9001/',
+      wsURL: 'ws://localhost:9001/ws/',
     },
   },
 

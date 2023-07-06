@@ -38,7 +38,6 @@ pub struct Unsubscribe {
 #[rtype(result = "()")]
 pub struct Signal {
     pub _id: ObjectId,
-    pub action: String,
     pub peer_data: String,
     pub remote_id: ObjectId,
     pub r#type: String,

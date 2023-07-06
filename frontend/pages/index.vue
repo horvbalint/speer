@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import SimplePeer from 'simple-peer'
-import type { MinimalUser } from '../../backend/bindings/MinimalUser'
+import type { MinimalUser } from '~/../backend/bindings/MinimalUser'
 
 definePageMeta({
   middleware: 'auth',
 })
 
-const authUser = useAuthUser()
+const authUser = getAuthUser()
 
 function logout() {
   $api('/logout', { method: 'post' })
@@ -56,8 +55,23 @@ function acceptRequest(request: MinimalUser) {
     .catch(err => console.error(err))
 }
 
-function connectTo(partnerId: string) {
-  const peer = new SimplePeer()
+function startRoom(partner: MinimalUser) {
+  createRoom([partner._id])
+    .catch(err => console.error(err))
+}
+
+const rooms = getRooms()
+const room = computed(() => {
+  if (!rooms.value.length)
+    return null
+
+  return rooms.value[0]
+})
+
+const message = ref('')
+function sendMessage() {
+  room.value!.send(message.value)
+  message.value = ''
 }
 
 getFriends()
@@ -89,8 +103,16 @@ getFriendRequests()
     <div>
       <p>Friends:</p>
 
-      <p v-for="friend in friends" :key="friend._id" @click="connectTo(friend._id)">
+      <p v-for="friend in friends" :key="friend._id" @click="startRoom(friend)">
         {{ friend.username }}
+      </p>
+    </div>
+
+    <div v-if="room">
+      <u-input v-model="message" placeholder="Write your message here" @keyup.enter="sendMessage()" />
+
+      <p v-for="m in room.messages" :key="m.message">
+        <b>{{ m.from }}:</b> {{ m.message }}
       </p>
     </div>
 

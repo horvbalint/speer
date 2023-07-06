@@ -21,7 +21,8 @@
     "nuxt-icon": "^0.4.1",
     "sass": "^1.63.6",
     "simple-git-hooks": "^2.8.1",
-    "typescript": "latest"
+    "typescript": "latest",
+    "@types/simple-peer": "^9.11.5"
   },
   "simple-git-hooks": {
     "pre-commit": "pnpm lint-staged"

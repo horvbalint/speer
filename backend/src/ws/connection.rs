@@ -3,6 +3,7 @@ use actix::{Actor, StreamHandler, Running, Addr, AsyncContext, ActorContext, Han
 use actix_web_actors::ws;
 use mongodb::bson::oid::ObjectId;
 use serde::Deserialize;
+use ts_rs::TS;
 
 use crate::schemas::User;
 use crate::ws::message;
@@ -14,26 +15,28 @@ use super::Signal;
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, TS)]
 #[serde(rename_all = "camelCase")]
-struct SingalMessage {
-    action: String,
+#[ts(export)]
+struct SignalMessage {
     peer_data: String,
     remote_id: ObjectId,
     r#type: String,
     data: Option<String>
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, TS)]
+#[ts(export)]
 struct PusherMessage {
     action: String,
     event: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug, TS)]
 #[serde(untagged)]
+#[ts(export)]
 enum Message {
-    Signal(SingalMessage),
+    Signal(SignalMessage),
     Pusher(PusherMessage),
 }
 
@@ -80,7 +83,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Connection {
                 match serde_json::from_str(&text) {
                     Ok(Message::Signal(msg)) => self.handle_signal_msg(msg),
                     Ok(Message::Pusher(msg)) => self.handle_pusher_msg(msg),
-                    _ => {}
+                    _ => {eprintln!("Unrecognized message:\n{text}")}
                 }
             },
             Ok(ws::Message::Close(_)) => ctx.stop(),
@@ -117,7 +120,6 @@ impl Connection {
     fn hb(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                println!("Disconnecting failed heartbeat");
                 ctx.stop();
                 return;
             }
@@ -144,10 +146,9 @@ impl Connection {
         }
     }
 
-    fn handle_signal_msg(&self, msg: SingalMessage) {
+    fn handle_signal_msg(&self, msg: SignalMessage) {
         self.server.do_send(Signal {
             _id: self.user._id,
-            action: msg.action,
             peer_data: msg.peer_data,
             remote_id: msg.remote_id,
             r#type: msg.r#type,

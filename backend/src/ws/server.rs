@@ -93,7 +93,6 @@ impl Handler<Signal> for Server {
             if let Ok(Some(user)) = users_coll.find_one(doc!{"_id": &msg._id}, None).await {
                 if user.friends.contains(&msg.remote_id) {
                     let payload = json!({
-                        "action": "signal",
                         "peerData": msg.peer_data,
                         "remoteId": msg._id.to_hex(),
                         "type": msg.r#type,
@@ -140,7 +139,7 @@ impl Handler<Disconnect> for Server {
 
         Rc::get_mut(&mut self.events)
             .map( |events| events.iter_mut() )
-            .map( |events| events.for_each(|(_, map)| {map.remove(&msg._id);}) );    
+            .map( |events| events.for_each(|(_, map)| {map.remove(&msg._id);}) );
     }
 }
 
