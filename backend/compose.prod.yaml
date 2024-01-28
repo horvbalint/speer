@@ -5,12 +5,7 @@ services:
       context: .
       dockerfile: dockerfile.prod
     volumes:
-      - ./src:/speer/src
       - ./files:/speer/files
-      - ./emails:/speer/emails
-      - ./.env:/speer/.env
-      - ./.gitignore:/speer/.gitignore
-      - ./changelog.json:/speer/changelog.json
     ports:
       - "9001:9001"
     depends_on:
