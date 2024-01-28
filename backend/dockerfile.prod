@@ -9,16 +9,16 @@ COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
 
 # 3. Build only the dependencies to cache them
-RUN mold --run cargo build --release && rm ./src/*.rs
+RUN cargo build --release && rm ./src/*.rs
 RUN rm ./target/release/deps/speer*
 
 COPY . .
-RUN cargo install --path .
+RUN cargo build --release
 
 FROM debian:bookworm-slim
 WORKDIR /speer
 RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /usr/local/cargo/bin/speer /usr/local/bin/speer
+COPY --from=builder /speer/target/release/speer /speer/speer
 COPY --from=builder /speer/.env /speer/.env
 COPY --from=builder /speer/changelog.json /speer/changelog.json
-CMD ["speer"]
+CMD ["/speer/speer"]
