@@ -16,6 +16,10 @@ services:
     depends_on:
       - mongo
       - redis
+    environment:
+      SPEER_SERVER_ADDRESS: "0.0.0.0:9001"
+      SPEER_MONGO_URL: "mongodb://mongo:27017"
+      SPEER_REDIS_ADDRESS: "redis:6379"
 
   mongo:
     image: mongo

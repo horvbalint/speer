@@ -24,42 +24,48 @@ pub struct CurrDir{
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct EnvVars {
-    server_port: Option<i32>,
     cookie_secret: String,
     confirm_secret: String,
     mailjet_public: String,
     mailjet_secret: String,
     admin_email: String,
+    #[serde(default = "default_server_address")]
+    server_address: String,
+    #[serde(default = "default_redis_address")]
+    redis_address: String,
+    #[serde(default = "default_mongo_url")]
+    mongo_url: String,
+    #[serde(default = "default_frontend_url")]
+    fontend_url: String,
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     dotenv().expect("\n\nNo '.env' file can be found in the current working directory, or it is formatted badly.\nYou can find information about the file in the documentation: https://github.com/horvbalint/speer#backendenv\n\n");
     env_logger::init();
+    let env_vars = envy::prefixed("SPEER_").from_env::<EnvVars>().unwrap();
+    let server_address = env_vars.server_address.clone();
 
-    let client_options = ClientOptions::parse("mongodb://mongo:27017/").await.unwrap();
+    let client_options = ClientOptions::parse(&env_vars.mongo_url).await.unwrap();
     let client = Client::with_options(client_options).unwrap();
     let db = client.database("speer");
     let ws_server = ws::Server::new(db.collection::<schemas::User>("users")).start();
-    let env_vars = envy::prefixed("SPEER_").from_env::<EnvVars>().unwrap();
-    let server_port = env_vars.server_port.unwrap_or(9001);
 
     let server = HttpServer::new(move || {
         let cors = Cors::default()
-            .allowed_origin("http://localhost:9000")
-            .allowed_origin("https://speer.fun")
+            .allowed_origin(&env_vars.fontend_url)
             .allow_any_method()
             .allow_any_header()
             .supports_credentials();
         let curr_dir = CurrDir {
-            path: env::current_dir().unwrap().to_str().unwrap().to_string()
+          path: env::current_dir().unwrap().to_str().unwrap().to_string()
         };
         let limit_file_size = awmp::PartsConfig::default().with_file_limit(20_000_000);
         let json_string = fs::read_to_string("changelog.json").unwrap();
         let changelog = serde_json::from_str::<Map<String, Value>>(&json_string).unwrap();
 
         let session_middleware = SessionMiddleware::builder(
-          RedisActorSessionStore::new("redis:6379"),
+          RedisActorSessionStore::new(&env_vars.redis_address),
           Key::from(env_vars.cookie_secret.as_ref())
         )
             .cookie_same_site(SameSite::Strict)
@@ -111,7 +117,23 @@ async fn main() -> std::io::Result<()> {
     });
 
     println!("The dark side of the 🌑 is ready!");
+    println!("Listening at address: {}", server_address);
 
-    let server_addr = format!("0.0.0.0:{server_port}");
-    server.bind(server_addr)?.run().await
+    server.bind(server_address)?.run().await
+}
+
+fn default_server_address() -> String {
+    "localhost:9001".to_string()
+}
+
+fn default_redis_address() -> String {
+    "localhost:6379".to_string()
+}
+
+fn default_mongo_url() -> String {
+    "mongodb://localhost:27017".to_string()
+}
+
+fn default_frontend_url() -> String {
+    "http://localhost:9000".to_string()
 }
