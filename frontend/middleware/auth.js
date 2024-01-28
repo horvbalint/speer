@@ -4,7 +4,7 @@ import PeerClient from '../plugins/peerclient'
 export default ({$axios, redirect, store, $config}) => {
   return new Promise( (resolve, reject) => {
     const wsAddress = new URL($config.backendUrl)
-    wsAddress.protocol = wsAddress.protocol.endsWith('s') ? 'wss' : 'ws'
+    wsAddress.protocol = wsAddress.protocol.endsWith('s:') ? 'wss:' : 'ws:'
     wsAddress.pathname += 'ws/'
 
     let socket = new WebSocket(wsAddress.href)
