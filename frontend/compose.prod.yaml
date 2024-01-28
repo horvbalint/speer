@@ -6,3 +6,7 @@ services:
       dockerfile: dockerfile.prod
     ports:
       - "9000:9000"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: ${PORT}"
+      SPEER_BACKEND_URL: "${SPEER_BACKEND_URL}"

@@ -27,10 +27,6 @@ export const state = () => ({
   screenWidth: 1000, // width of the screen
   beforeInstallPrompt: null, // deffered PWA install event
   pageVisible: true, // is the page visible
-  backendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001',
-  frontendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun',
-  // backendURL: 'http://localhost:9001',
-  // frontendURL: 'http://localhost:9000',
   sounds: {
     message: null, // sound to play when a message is received
     call: null, // sound to play when a call is received
@@ -188,10 +184,6 @@ export const mutations = {
     state.beforeInstallPrompt = null
     state.pageVisible = true
     state.filesToConfirm = []
-    state.backendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001'
-    state.frontendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun'
-    // state.backendURL = 'http://localhost:9001'
-    // state.frontendURL = 'http://localhost:9000'
     state.sounds = {
       message: null,
       call: null,
@@ -653,9 +645,9 @@ export const actions = {
     ctx.dispatch('popUp/close', 'file')
   },
   loadSounds(ctx) {
-    let message = new Audio(`${ctx.state.frontendURL}/message.mp3`)
-    let call = new Audio(`${ctx.state.frontendURL}/call.mp3`)
-    let callWaiting = new Audio(`${ctx.state.frontendURL}/callWaiting.mp3`)
+    let message = new Audio('/message.mp3')
+    let call = new Audio('/call.mp3')
+    let callWaiting = new Audio('/callWaiting.mp3')
 
     call.loop = true
     callWaiting.loop = true
@@ -676,7 +668,7 @@ export const actions = {
   },
   stopSound(ctx, name) {
     ctx.state.sounds[name].pause()
-    let sound = new Audio(`${ctx.state.frontendURL}/${name}.mp3`)
+    let sound = new Audio(`/${name}.mp3`)
 
     if(name.startsWith('call'))
       sound.loop = true

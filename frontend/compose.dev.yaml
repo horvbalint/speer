@@ -9,3 +9,5 @@ services:
     volumes:
       - ./:/speer
       - /speer/node_modules
+    environment:
+      HOST: "0.0.0.0"

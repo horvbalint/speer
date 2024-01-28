@@ -4,9 +4,9 @@ use serde_json::{json, Value};
 use crate::{EnvVars, schemas::Feedback};
 
 #[cfg(debug_assertions)]
-pub async fn send_confirmation(_username: &str, _email: &str, token: &str, _env_vars: &EnvVars) -> Result<(), String> {
-  println!("CONFIRM REGISTRATION: \n http://localhost:9000/confirm?token={}", token);
-  println!("CANCEL REGISTRATION: \n http://localhost:9000/cancel?token={}", token);
+pub async fn send_confirmation(_username: &str, _email: &str, token: &str, env_vars: &EnvVars) -> Result<(), String> {
+  println!("CONFIRM REGISTRATION: \n {}/confirm?token={token}", env_vars.fontend_url);
+  println!("CANCEL REGISTRATION: \n {}/cancel?token={token}", env_vars.fontend_url);
 
   Ok(())
 }
@@ -16,8 +16,8 @@ pub async fn send_confirmation(username: &str, email: &str, token: &str, env_var
   let mut html = fs::read_to_string("emails/emailConfirmation.html")
     .map_err(|_| "Failed to open email template".to_string())?;
 
-  html = html.replace("{{CONFIRM_URL}}", format!("https://speer.fun/confirm?token={token}").as_str());
-  html = html.replace("{{CANCEL_URL}}", format!("https://speer.fun/cancel?token={token}").as_str());
+  html = html.replace("{{CONFIRM_URL}}", format!("{}/confirm?token={token}", env_vars.fontend_url).as_str());
+  html = html.replace("{{CANCEL_URL}}", format!("{}/cancel?token={token}", env_vars.fontend_url).as_str());
   html = html.replace("{{USERNAME}}", &html_escape::encode_safe(username));
 
   let content = json!({
@@ -25,7 +25,7 @@ pub async fn send_confirmation(username: &str, email: &str, token: &str, env_var
       {
         "From": {
           "Name": "Speer",
-          "Email": "noreply@speer.fun",
+          "Email": &env_vars.noreply_email,
         },
         "To": [{
           "Name": &username,
@@ -54,7 +54,7 @@ pub async fn send_feedback_notification(feedback: &Feedback, env_vars: &EnvVars)
       {
         "From": {
           "Name": "Speer",
-          "Email": "noreply@speer.fun",
+          "Email": &env_vars.noreply_email,
         },
         "To": [{
           "Name": "Admin",

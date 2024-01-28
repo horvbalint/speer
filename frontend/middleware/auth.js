@@ -1,14 +1,16 @@
 import Pusher from '../plugins/pusher'
 import PeerClient from '../plugins/peerclient'
 
-export default ({$axios, redirect, store}) => {
+export default ({$axios, redirect, store, $config}) => {
   return new Promise( (resolve, reject) => {
-    let wsAddress = process.env.NODE_ENV == 'development' ? 'ws://localhost:9001/ws/' : 'wss://speer.fun:9001/ws/'
+    const wsAddress = new URL($config.backendUrl)
+    wsAddress.protocol = wsAddress.protocol.endsWith('s') ? 'wss' : 'ws'
+    wsAddress.pathname += 'ws/'
 
-    let socket = new WebSocket(wsAddress)
+    let socket = new WebSocket(wsAddress.href)
     let pusher = new Pusher()
     let peerClient = new PeerClient()
-    
+
     Promise.all([
       $axios.$get('/me'),
       $axios.$get('/friends'),

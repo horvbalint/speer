@@ -13,8 +13,8 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close()
 
-  const urlToOpen = new URL('https://speer.fun').href
-  
+  const urlToOpen = new URL(self.location.origin).href
+
   const promiseChain = clients.matchAll({
     type: 'window',
     includeUncontrolled: true
@@ -29,17 +29,18 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(promiseChain)
 })
 
-self.addEventListener('pushsubscriptionchange', event => {
-  event.waitUntil(
-    fetch('https://speer.fun:9001/pushsubscriptionchange', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        oldEndpoint: event.oldSubscription ? event.oldSubscription.endpoint : null,
-        newEndpoint: event.newSubscription ? event.newSubscription.endpoint : null,
-        subscription: event.newSubscription ? event.newSubscription.toJSON() : null,
-      })
-    })
-  )
-})
+// TODO: Find out a way to send it to the correct backend
+// self.addEventListener('pushsubscriptionchange', event => {
+//   event.waitUntil(
+//     fetch(`https://backend.speer.fun/pushsubscriptionchange`, {
+//       method: 'POST',
+//       headers: { 'Content-Type': 'application/json' },
+//       credentials: 'include',
+//       body: JSON.stringify({
+//         oldEndpoint: event.oldSubscription ? event.oldSubscription.endpoint : null,
+//         newEndpoint: event.newSubscription ? event.newSubscription.endpoint : null,
+//         subscription: event.newSubscription ? event.newSubscription.toJSON() : null,
+//       })
+//     })
+//   )
+// })

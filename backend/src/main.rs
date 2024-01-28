@@ -29,6 +29,7 @@ pub struct EnvVars {
     mailjet_public: String,
     mailjet_secret: String,
     admin_email: String,
+    noreply_email: String,
     #[serde(default = "default_server_address")]
     server_address: String,
     #[serde(default = "default_redis_address")]

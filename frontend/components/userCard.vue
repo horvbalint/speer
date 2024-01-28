@@ -7,7 +7,7 @@
     unread: friendText && friendText.unread,
     unavailable: !isTextAvailable
   }">
-    <div class="avatar" :style="{'background-image': `url('${$store.state.backendURL}/static/${user.avatar}')`}"></div>
+    <div class="avatar" :style="{'background-image': `url('${$config.backendUrl}/static/${user.avatar}')`}"></div>
     <div class="texts">
       <p class="name">{{ user.username }}</p>
       <p v-if="connecting" class="last-message">Connecting...</p>

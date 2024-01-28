@@ -6,13 +6,13 @@
     @close="$store.dispatch('popUp/close', 'profile')"
   >
     <div class="avatar">
-      <div class="img" @click="$refs.file.click()" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.user.avatar}')`}">
+      <div class="img" @click="$refs.file.click()" :style="{'background-image': `url('${$config.backendUrl}/static/${$store.state.user.avatar}')`}">
         <div class="border" ref="border"></div>
       </div>
       <label for="file">Click to change avatar (max 20MB)</label>
       <input id="file" type="file" hidden ref="file" accept="image/*" @change="changeAvatar()">
     </div>
-    
+
     <div class="devices">
       <h3>Notification devices:</h3>
 
@@ -54,7 +54,7 @@ export default {
           action: () => {
             if(this.$store.state.popUpDrag)
               this.$store.state.popUpDrag.stop()
-              
+
             this.$store.dispatch('logout')
           }
         },
@@ -141,7 +141,7 @@ export default {
     },
     removeDevice(device) {
       if( !confirm(`Do you want to remove this device: ${device.name}?`) ) return
-        
+
       this.$axios.$delete(`/removeDevice/${device.name}`)
         .then( () => this.$store.dispatch('removeDevice', device) )
         .catch( err => {

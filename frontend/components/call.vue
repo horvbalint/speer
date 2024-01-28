@@ -1,7 +1,7 @@
 <template>
   <div class="call" ref="call">
     <div v-show="!$store.getters.call.hasRemoteVideo" class="noImage">
-      <img :src="`${$store.state.backendURL}/static/${$store.state.call.partner.avatar}`">
+      <img :src="`${$config.backendUrl}/static/${$store.state.call.partner.avatar}`">
 
       <p v-if="!$store.getters.call.remoteStream">Waiting for {{$store.state.call.partner.username}} to response...</p>
       <p v-else>{{ currentDuration }}</p>
@@ -122,7 +122,7 @@ export default {
       if(hours) str += `${String(hours).padStart(2, '0')}:`
       str += `${String(minutes).padStart(2, '0')}:`
       str += `${String(secs).padStart(2, '0')}`
-      
+
       this.currentDuration = str
     }
   },

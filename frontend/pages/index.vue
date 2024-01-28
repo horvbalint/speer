@@ -14,7 +14,7 @@
       @click="$store.dispatch('popUp/open', 'profile')"
     >
       <span>{{$store.state.user.username}}</span>
-      <div class="avatar" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.user.avatar}')`}"/>
+      <div class="avatar" :style="{'background-image': `url('${$config.backendUrl}/static/${$store.state.user.avatar}')`}"/>
     </div>
 
     <div class="content">

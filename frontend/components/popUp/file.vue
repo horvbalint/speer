@@ -4,7 +4,7 @@
     icon="fas fa-file"
     :buttons="buttons"
   >
-    <div class="img" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.popUp.file.sender.avatar}')`}"/>
+    <div class="img" :style="{'background-image': `url('${$config.backendUrl}/static/${$store.state.popUp.file.sender.avatar}')`}"/>
     <p class="description">{{$store.state.popUp.file.sender.username}} wants to send you a file!</p>
 
     <div class="file">
@@ -50,7 +50,7 @@ export default {
                 partnerId: this.$store.state.popUp.file.sender._id,
                 value: {preview: this.preview}
               })
-              
+
             this.$store.dispatch('acceptFile', this.preview)
           }
         }
