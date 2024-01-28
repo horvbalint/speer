@@ -37,7 +37,7 @@ async fn main() -> std::io::Result<()> {
     dotenv().expect("\n\nNo '.env' file can be found in the current working directory, or it is formatted badly.\nYou can find information about the file in the documentation: https://github.com/horvbalint/speer#backendenv\n\n");
     env_logger::init();
 
-    let client_options = ClientOptions::parse("mongodb://localhost:27017/").await.unwrap();
+    let client_options = ClientOptions::parse("mongodb://mongo:27017/").await.unwrap();
     let client = Client::with_options(client_options).unwrap();
     let db = client.database("speer");
     let ws_server = ws::Server::new(db.collection::<schemas::User>("users")).start();
@@ -59,7 +59,7 @@ async fn main() -> std::io::Result<()> {
         let changelog = serde_json::from_str::<Map<String, Value>>(&json_string).unwrap();
 
         let session_middleware = SessionMiddleware::builder(
-          RedisActorSessionStore::new("127.0.0.1:6379"),
+          RedisActorSessionStore::new("redis:6379"),
           Key::from(env_vars.cookie_secret.as_ref())
         )
             .cookie_same_site(SameSite::Strict)
@@ -112,6 +112,6 @@ async fn main() -> std::io::Result<()> {
 
     println!("The dark side of the 🌑 is ready!");
 
-    let server_addr = format!("localhost:{server_port}");
+    let server_addr = format!("0.0.0.0:{server_port}");
     server.bind(server_addr)?.run().await
 }

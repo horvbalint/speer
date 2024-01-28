@@ -19,7 +19,7 @@
 
     <div class="content">
       <img src="/svg/chat.svg" alt="">
-      
+
       <template v-if="!$route.query['share-target']">
         <p class="desktop">Choose someone from the sidebar to start chatting</p>
         <p class="mobile">Swipe from the left to see your friends</p>
@@ -33,7 +33,7 @@
       <span class="feedback" @click="$store.dispatch('popUp/open', 'feedback')">give feedback</span>
     </p>
   </div>
-  
+
   <div v-else class="index">
     <div class="header">
       <i class="fas fa-arrow-left" @click="$store.dispatch('closeParnter')"/>
@@ -77,7 +77,7 @@
     <div class="bottom">
       <textarea v-model="message" @keydown.enter.exact.prevent="send()" placeholder="Type here..." autocomplete="off"/>
       <input type="file" multiple hidden ref="file" @change="sendFiles()">
-      
+
       <div class="icons">
         <i
           class="fas fa-file-medical"
@@ -98,7 +98,7 @@
 </template>
 
 <script>
-import PackageJSON from '~/../package.json'
+import PackageJSON from '~/package.json'
 
 export default {
   data() {
@@ -165,9 +165,9 @@ export default {
     hanldeDrop(event) {
       event.preventDefault()
 
-      let files = 
+      let files =
         event.dataTransfer.items
-          ? 
+          ?
         [...event.dataTransfer.items].filter(i => i.kind == 'file').map(i => i.getAsFile())
           :
         event.dataTransfer.files

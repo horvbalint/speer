@@ -1,0 +1,8 @@
+version: "3.3"
+services:
+  speer:
+    build:
+      context: .
+      dockerfile: dockerfile.prod
+    ports:
+      - "9000:9000"

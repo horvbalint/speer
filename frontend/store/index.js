@@ -1,4 +1,4 @@
-import NuxtConfig from '~/../nuxt.config'
+import NuxtConfig from '~/nuxt.config'
 import axios from 'axios'
 import streamSaver from 'streamsaver'
 import { WritableStream as ponyFillWritableStream } from "web-streams-polyfill/ponyfill"
@@ -21,7 +21,7 @@ export const state = () => ({
   requests: [], // friend requests
 
   filesToConfirm: [], // files waiting to be sent after using the Web Share Target API
-  
+
   sideBarDrag: null,  // Drag instance (plugins/drag.js)
   popUpDrag: null, // Drag instance (plugins/drag.js)
   screenWidth: 1000, // width of the screen
@@ -106,14 +106,14 @@ export const mutations = {
         hasRemoteAudio: false,
         hasRemoteVideo: false,
         constraints: {
-          video: { 
+          video: {
             input: {
               height: { max: 1080 },
               frameRate: { max: 25 },
             },
             output: {}
           },
-          audio: { 
+          audio: {
             input: {
               echoCancellation: true,
               noiseSuppression: true,
@@ -125,7 +125,7 @@ export const mutations = {
       }
     })
   },
-  addConnection(state, {remoteId, type, connection}) {   
+  addConnection(state, {remoteId, type, connection}) {
     state.partners[remoteId][type].connection = connection
   },
   closeConnection(state, {type, remoteId}) {
@@ -141,7 +141,7 @@ export const mutations = {
       console.log("GOTCHA!")
       console.trace()
     }
-    
+
     let message = {
       sender: senderId,
       timeStamp: Date.now(),
@@ -296,14 +296,14 @@ export const mutations = {
     state.partners[remoteId].call.hasRemoteAudio = false
     state.partners[remoteId].call.hasRemoteVideo = false
     state.partners[remoteId].call.constraints = {
-      video: { 
+      video: {
         input: {
           height: { max: 1080 },
           frameRate: { max: 25 },
         },
         output: {}
       },
-      audio: { 
+      audio: {
         input: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -312,7 +312,7 @@ export const mutations = {
       }
     }
     state.partners[remoteId].call.startTime = null
-    
+
     if(full)
       state.partners[remoteId].call.connection = null
   },
@@ -372,14 +372,14 @@ export const actions = {
 
     peerClient.onConnection = ({remoteId, connection}) => {
       setTextConnectionListeners(ctx, remoteId, connection)
-      
+
       ctx.commit('checkPartnerState', remoteId)
       ctx.commit('addConnection', {remoteId, type: 'text', connection})
     }
 
     peerClient.onFileConnection = ({remoteId, connection}) => {
       setFileConnectionListeners(ctx, remoteId, connection)
-      
+
       ctx.commit('checkPartnerState', remoteId)
       ctx.commit('addConnection', {remoteId, type: 'file', connection})
     }
@@ -392,7 +392,7 @@ export const actions = {
   },
   setPusher(ctx, pusher) {
     ctx.commit('setPusher', pusher)
-    
+
     pusher.subscribe( 'request', request => ctx.commit('addRequest', request) )
     pusher.subscribe( 'login', remoteId => ctx.commit('setOnline', {remoteId, online: true}) )
     pusher.subscribe( 'logout', remoteId => {
@@ -401,17 +401,17 @@ export const actions = {
 
       if(ctx.state.popUp.call && ctx.state.popUp.call.caller._id == remoteId)
         ctx.dispatch('popUp/set', {popUp: 'call', value: null})
-        
+
       ctx.commit('setOnline', {remoteId, online: false})
     })
     pusher.subscribe( 'friend', async friend => {
       ctx.commit('addFriend', friend)
-  
+
       axios.get(`${NuxtConfig.axios.baseURL}/online/${friend._id}`, {withCredentials: true})
         .then( ({data: online}) => ctx.commit('setOnline', {remoteId: friend._id, online}) )
         .catch( err => console.error(err) )
     })
-  
+
     axios.get(`${NuxtConfig.axios.baseURL}/onlines`, {withCredentials: true})
       .then( ({data: onlines}) => ctx.commit('setOnlines', onlines) )
       .catch( err => console.error(err) )
@@ -453,7 +453,7 @@ export const actions = {
           text: 'Reload',
           action: () => location.reload()
         })
-        
+
         return reject()
       }
 
@@ -521,7 +521,7 @@ export const actions = {
         for(let file of files) {
           let messageIndex = ctx.state.partners[remoteId].text.messages.length
           let percentCallback = percent => ctx.commit('setPercent', {remoteId, percent, index: messageIndex})
-          
+
           ctx.commit('addMessage', {
             remoteId,
             senderId: ctx.state.user._id,
@@ -529,7 +529,7 @@ export const actions = {
             file: true,
             percent: 0,
           })
-    
+
           await ctx.state.partners[remoteId].file.connection.send(file, percentCallback)
             .catch( err => {
               console.error(err)

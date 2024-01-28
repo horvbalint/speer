@@ -1,0 +1,25 @@
+version: "3.3"
+services:
+  speer:
+    build:
+      context: .
+      dockerfile: dockerfile.dev
+    volumes:
+      - ./:/speer/
+      - /speer/target
+    ports:
+      - "9001:9001"
+    depends_on:
+      - mongo
+      - redis
+
+  mongo:
+    image: mongo
+    command: --quiet --logpath /dev/null
+    volumes:
+      - /data/speer/db:/data/db
+
+  redis:
+    image: redis
+    logging:
+      driver: none

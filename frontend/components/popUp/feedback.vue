@@ -47,7 +47,7 @@
 
 <script>
 import PopUp from '~/components/popUp/popUp'
-import PackageJSON from '~/../package.json'
+import PackageJSON from '~/package.json'
 
 export default {
   data() {
@@ -83,7 +83,7 @@ export default {
     },
     sendFeedback() {
       if(!this.description.length)
-        return errorBox('Empty feedback!', 'Please provide a description') 
+        return errorBox('Empty feedback!', 'Please provide a description')
 
       this.stepsToReproduce = this.stepsToReproduce.filter(step => step.trim().length)
 

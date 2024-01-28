@@ -1,5 +1,4 @@
 export default {
-  rootDir: 'frontend/',
   /*
   ** Nuxt rendering mode
   ** See https://nuxtjs.org/api/configuration-mode
@@ -15,6 +14,7 @@ export default {
   ** See https://nuxtjs.org/api/configuration-head
   */
   server: {
+    host: '0.0.0.0',
     port: 9000,
   },
   head: {

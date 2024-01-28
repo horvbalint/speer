@@ -1,0 +1,11 @@
+version: "3.3"
+services:
+  speer:
+    build:
+      context: .
+      dockerfile: dockerfile.dev
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./:/speer
+      - /speer/node_modules
