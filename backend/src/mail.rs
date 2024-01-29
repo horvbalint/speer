@@ -76,9 +76,13 @@ async fn send_email(content: Value, env_vars: &EnvVars) -> Result<(), String> {
     .json(&content)
     .send()
     .await
-    .or_else(|_| Err("Failed to send email".to_string()))?;
+    .or_else(|err| {
+      eprintln!("{:#?}", err);
+      Err("Failed to send email".to_string())
+    })?;
 
   if !response.status().is_success() {
+    eprintln!("{:#?}", response.status());
     return Err(format!("Mailjet API error: {}", response.status()) );
   }
 
