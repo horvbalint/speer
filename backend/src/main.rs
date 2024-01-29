@@ -42,7 +42,10 @@ pub struct EnvVars {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    dotenv().expect("\n\nNo '.env' file can be found in the current working directory, or it is formatted badly.\nYou can find information about the file in the documentation: https://github.com/horvbalint/speer#backendenv\n\n");
+    if let Err(_) = dotenv() {
+        println!("[Info] No '.env' file can be found in the current working directory, or it is formatted badly.\nYou can find information about the file in the documentation: https://github.com/horvbalint/speer#backendenv");
+    }
+    
     env_logger::init();
     let env_vars = envy::prefixed("SPEER_").from_env::<EnvVars>().unwrap();
     let server_address = env_vars.server_address.clone();
