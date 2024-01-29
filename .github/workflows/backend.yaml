@@ -37,16 +37,25 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-      # This step uses the `docker/build-push-action` action to build the image, based on your repository's `Dockerfile`. If the build succeeds, it pushes the image to GitHub Packages.
-      # It uses the `context` parameter to define the build's context as the set of files located in the specified path. For more information, see "[Usage](https://github.com/docker/build-push-action#usage)" in the README of the `docker/build-push-action` repository.
-      # It uses the `tags` and `labels` parameters to tag and label the image with the output from the "meta" step.
-      - name: Build and push Docker image
+      # Building and pushing the backend image
+      - name: Build and push backend Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
         with:
           context: ./backend
           file: ./backend/dockerfile.prod
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}-backend
+          labels: ${{ steps.meta.outputs.labels }}
+      # Building and pushing the frontend image
+      - name: Build and push frontend Docker image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        env:
+          SPEER_BACKEND_URL: https://backend.docker.speer.fun
+        with:
+          context: ./frontend
+          file: ./frontend/dockerfile.prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-frontend
           labels: ${{ steps.meta.outputs.labels }}
       # - name: Deploy to Coolify
       #   run: |

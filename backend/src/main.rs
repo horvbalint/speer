@@ -37,7 +37,7 @@ pub struct EnvVars {
     #[serde(default = "default_mongo_url")]
     mongo_url: String,
     #[serde(default = "default_frontend_url")]
-    fontend_url: String,
+    frontend_url: String,
 }
 
 #[actix_web::main]
@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
     if let Err(_) = dotenv() {
         println!("[Info] No '.env' file can be found in the current working directory, or it is formatted badly.\nYou can find information about the file in the documentation: https://github.com/horvbalint/speer#backendenv");
     }
-    
+
     env_logger::init();
     let env_vars = envy::prefixed("SPEER_").from_env::<EnvVars>().unwrap();
     let server_address = env_vars.server_address.clone();
@@ -57,7 +57,7 @@ async fn main() -> std::io::Result<()> {
 
     let server = HttpServer::new(move || {
         let cors = Cors::default()
-            .allowed_origin(&env_vars.fontend_url)
+            .allowed_origin(&env_vars.frontend_url)
             .allow_any_method()
             .allow_any_header()
             .supports_credentials();
