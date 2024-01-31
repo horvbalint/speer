@@ -1,7 +1,7 @@
 use serde_json::{json, Value};
 use std::fs;
 
-use crate::{schemas::Feedback, EnvVars};
+use crate::{schemas::Feedback, utils::MapAndLog, EnvVars};
 
 #[cfg(debug_assertions)]
 pub async fn send_confirmation(
@@ -30,7 +30,7 @@ pub async fn send_confirmation(
     env_vars: &EnvVars,
 ) -> Result<(), String> {
     let mut html = fs::read_to_string("emails/emailConfirmation.html")
-        .map_err(|_| "Failed to open email template".to_string())?;
+        .log_and_map("Failed to open email template")?;
 
     html = html.replace(
         "{{CONFIRM_URL}}",
@@ -67,7 +67,7 @@ pub async fn send_feedback_notification(
     env_vars: &EnvVars,
 ) -> Result<(), String> {
     let mut html = fs::read_to_string("emails/feedbackNotification.html")
-        .map_err(|_| "Failed to open email template".to_string())?;
+        .log_and_map("Failed to open email template")?;
 
     html = html.replace("{{TYPE}}", &html_escape::encode_safe(&feedback.r#type));
     html = html.replace(
@@ -111,10 +111,7 @@ async fn send_email(content: Value, env_vars: &EnvVars) -> Result<(), String> {
         .json(&content)
         .send()
         .await
-        .or_else(|err| {
-            eprintln!("{:#?}", err);
-            Err("Failed to send email".to_string())
-        })?;
+        .log_and_map("Failed to send email")?;
 
     if !response.status().is_success() {
         eprintln!("{:#?}", response.status());

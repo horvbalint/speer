@@ -12,7 +12,7 @@ use actix_files::NamedFile;
 use image::imageops::FilterType;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{CurrDir, ws::{Server, ConnectedIds, Dispatch}, EnvVars, schemas::{Device, Feedback}};
+use crate::{schemas::{Device, Feedback}, utils::MapAndLog, ws::{Server, ConnectedIds, Dispatch}, CurrDir, EnvVars};
 use crate::schemas::{User, MinimalUser, MeUser};
 use crate::mail;
 use crate::schemas::Confirm;
@@ -51,12 +51,12 @@ pub async fn register_handler(
 ) -> Result<impl Responder, Error> {
     let filter = doc!{"email": &body.email};
     let user_exists = users_coll.find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .is_some();
     if user_exists {return Err(ErrorBadRequest("Email in use"));}
 
     let password = hash(&body.password, 10)
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     let user = User {
         email: body.email.to_string(),
@@ -65,11 +65,11 @@ pub async fn register_handler(
         ..Default::default()
     };
     let insert_result = users_coll.insert_one(&user, None).await
-        .map_err(|_| ErrorInternalServerError("Failed to create user"))?;
+        .log_and_map(ErrorInternalServerError("Failed to create user"))?;
 
     let inserted_id = insert_result.inserted_id.as_object_id().unwrap().to_string();
     let token = encode(&Header::default(), &inserted_id, &EncodingKey::from_secret(env_vars.confirm_secret.as_ref()))
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     let confirm = Confirm {
         _id: ObjectId::new(),
@@ -77,10 +77,10 @@ pub async fn register_handler(
         token: token.clone(),
     };
     confirms_coll.insert_one(confirm, None).await
-        .map_err(|_| ErrorInternalServerError("Failed to create user"))?;
+        .log_and_map(ErrorInternalServerError("Failed to create user"))?;
 
     mail::send_confirmation(&body.username, &body.email, &token, &env_vars).await
-        .map_err(|_| ErrorInternalServerError("Failed to send confirmation email"))?;
+        .log_and_map(ErrorInternalServerError("Failed to send confirmation email"))?;
 
     Ok("")
 }
@@ -94,18 +94,18 @@ pub async fn login_handler(
     let filter = doc!{"email": &credentials.email};
 
     let user = users_coll.find_one(filter, None).await
-        .map_err(|_| ErrorBadRequest("Incorrect credentials"))?
+        .log_and_map(ErrorBadRequest("Incorrect credentials"))?
         .ok_or_else(|| ErrorBadRequest("Incorrect credentials"))?;
 
     let verified = verify(&credentials.password, user.password.as_str())
-        .map_err(|_| ErrorUnauthorized("Password does not match"))?;
+        .log_and_map(ErrorUnauthorized("Password does not match"))?;
 
     if !verified { return Err(ErrorUnauthorized("Password does not match")) }
     if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }
     if !user.confirmed { return Err(ErrorUnauthorized("Email not confirmed")) }
 
     Identity::login(&request.extensions(), user._id.to_hex())
-      .map_err(|_| ErrorInternalServerError(""))?;
+      .log_and_map(ErrorInternalServerError(""))?;
 
     Ok("")
 }
@@ -127,14 +127,14 @@ pub async fn confirm_handler(
 
     let filter = doc!{"token": token};
     let confirm = confirms_coll.find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError("Invalid token"))?
+        .log_and_map(ErrorInternalServerError("Invalid token"))?
         .ok_or_else(|| ErrorInternalServerError("Invalid token"))?;
 
     let filter = doc!{"_id": confirm.user};
     let update = doc!{"$set": {"confirmed": true}};
 
     users_coll.update_one(filter, update, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     tokio::spawn(async move {
         let filter = doc!{"_id": confirm._id};
@@ -154,12 +154,12 @@ pub async fn cancel_handler(
 
     let filter = doc!{"token": token};
     let confirm = confirms_coll.find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError("Invalid token"))?
+        .log_and_map(ErrorInternalServerError("Invalid token"))?
         .ok_or_else(|| ErrorInternalServerError("Invalid token"))?;
 
     let filter = doc!{"_id": confirm.user, "confirmed": false};
     users_coll.delete_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError("Failed to cancel token"))?;
+        .log_and_map(ErrorInternalServerError("Failed to cancel token"))?;
 
     tokio::spawn(async move {
         let filter = doc!{"_id": confirm._id};
@@ -184,16 +184,16 @@ pub async fn resend_confirmation_handler(
     };
 
     let user = users_coll.find_one(filter, None).await
-        .map_err(|_| ErrorBadRequest("Invalid email"))?
+        .log_and_map(ErrorBadRequest("Invalid email"))?
         .ok_or_else(|| ErrorBadRequest("Invalid email"))?;
 
     let filter = doc!{"user": user._id};
     let confirm = confirms_coll.find_one(filter, None).await
-        .map_err(|_| ErrorBadRequest("Failed to resend email"))?
+        .log_and_map(ErrorBadRequest("Failed to resend email"))?
         .ok_or_else(|| ErrorBadRequest("Failed to resend email"))?;
 
     mail::send_confirmation(&user.username, &user.email, &confirm.token, &env_vars).await
-        .map_err(|_| ErrorInternalServerError("Failed to send confirmation email"))?;
+        .log_and_map(ErrorInternalServerError("Failed to send confirmation email"))?;
 
     Ok("ok")
 }
@@ -217,19 +217,19 @@ pub async fn avatar_handler(
     let path = PathBuf::from(format!("{}/{}", files_path, full_file_name));
 
     let save_res = uploaded_file.persist_in("/tmp")
-        .map_err(|_| ErrorInternalServerError("Failed to save image"))?;
+        .log_and_map(ErrorInternalServerError("Failed to save image"))?;
 
     let tmp_path = save_res.to_str().unwrap();
     image::open(&tmp_path)
-        .map_err(|_| ErrorInternalServerError("Failed to compress image"))?
+        .log_and_map(ErrorInternalServerError("Failed to compress image"))?
         .resize_to_fill(200, 200, FilterType::Triangle)
         .save(path)
-        .map_err(|_| ErrorInternalServerError("Failed to compress image"))?;
+        .log_and_map(ErrorInternalServerError("Failed to compress image"))?;
 
     let filter = doc!{"_id": user._id};
     let update = doc!{"$set": {"avatar": &full_file_name}};
     users_coll.update_one(filter, update, None).await
-        .map_err(|_| ErrorInternalServerError("Could not update user profile"))?;
+        .log_and_map(ErrorInternalServerError("Could not update user profile"))?;
 
     fs::remove_file(tmp_path).ok();
     if user.avatar != "avatar.jpg" {
@@ -248,7 +248,7 @@ pub async fn me_handler(
     let filter = doc!{"_id": user._id};
 
     let user = db.collection::<MeUser>("users").find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorBadRequest(""))?;
 
     Ok(Json(user))
@@ -260,7 +260,7 @@ pub async fn onlines_handler(
     user: User,
 ) -> Result<impl Responder, Error> {
     let onlines = ws_addr.send(ConnectedIds).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorInternalServerError(""))?;
 
     let friend_onlines: Vec<String> = onlines.into_iter()
@@ -278,14 +278,14 @@ pub async fn online_handler(
     user: User,
 ) -> Result<impl Responder, Error> {
     let id = ObjectId::parse_str(params.into_inner())
-        .map_err(|_| ErrorBadRequest("Not an id"))?;
+        .log_and_map(ErrorBadRequest("Not an id"))?;
 
     if !user.friends.contains(&id) {
         return Err(ErrorForbidden("Not a friend"));
     }
 
     let onlines = ws_addr.send(ConnectedIds).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorInternalServerError(""))?;
 
     let is_online = onlines.contains(&id);
@@ -310,7 +310,7 @@ pub async fn user_by_email_handler(
     };
 
     let user = minimal_users_coll.find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     Ok(Json(user))
 }
@@ -327,9 +327,9 @@ pub async fn friends_handler(
     };
 
     let users: Vec<MinimalUser> = minimal_users_coll.find(filter, None).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .try_collect().await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     Ok(Json(users))
 }
@@ -343,7 +343,7 @@ pub async fn request_id_handler(
 ) -> Result<impl Responder, Error> {
     let id = params.into_inner();
     let id = ObjectId::from_str(&id)
-        .map_err(|_| ErrorBadRequest("Not an id"))?;
+        .log_and_map(ErrorBadRequest("Not an id"))?;
 
     if user._id == id {
         return Err(ErrorBadRequest("Make peace with yourself"))
@@ -355,7 +355,7 @@ pub async fn request_id_handler(
         "_id": id
     };
     let req_user = users_coll.find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorBadRequest("User not found"))?;
 
     if req_user.friends.contains(&user._id) {
@@ -365,7 +365,7 @@ pub async fn request_id_handler(
     let filter = doc!{"_id": &req_user._id};
     let update = doc!{"$addToSet": {"requests": user._id}};
     users_coll.update_one(filter, update, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     tokio::spawn(async move {
         let event = Dispatch {
@@ -401,9 +401,9 @@ pub async fn request_handler(
 
 
     let req_users: Vec<MinimalUser> = minimal_users_coll.find(filter, None).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .try_collect().await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     Ok(Json(req_users))
 }
@@ -417,7 +417,7 @@ pub async fn accept_id_handler(
 ) -> Result<impl Responder, Error> {
     let id = params.into_inner();
     let id = ObjectId::from_str(&id)
-        .map_err(|_| ErrorBadRequest("Not an id"))?;
+        .log_and_map(ErrorBadRequest("Not an id"))?;
 
     if !user.requests.iter().any(|r| r == &id) {
         return Err(ErrorBadRequest("Not in requests"));
@@ -429,12 +429,12 @@ pub async fn accept_id_handler(
         "$addToSet": {"friends": id}
     };
     users_coll.update_one(filter, update, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     let filter = doc! {"_id": id};
     let update = doc! {"$addToSet": {"friends": user._id}};
     users_coll.update_one(filter, update, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     tokio::spawn(async move {
         let event = Dispatch {
@@ -469,7 +469,7 @@ pub async fn decline_id_handler(
 ) -> Result<impl Responder, Error> {
     let id = params.into_inner();
     let id = ObjectId::from_str(&id)
-        .map_err(|_| ErrorBadRequest("Not an id"))?;
+        .log_and_map(ErrorBadRequest("Not an id"))?;
 
     if !user.requests.iter().any(|r| r == &id) {
         return Err(ErrorBadRequest("Not in requests"));
@@ -478,7 +478,7 @@ pub async fn decline_id_handler(
     let filter = doc! {"_id": user._id};
     let update = doc! {"$pull": {"requests": id}};
     users_coll.update_one(filter, update, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     Ok("")
 }
@@ -496,7 +496,7 @@ pub async fn add_device_handler(
     let filter = doc!{"_id": &user._id};
     let update = doc!{"$push": {"devices": &*device}};
     users_coll.update_one(filter, update, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     tokio::spawn(async move {
         let title = "Device registered!".to_string();
@@ -521,7 +521,7 @@ pub async fn remove_device_handler(
     let filter = doc!{"_id": &user._id};
     let update = doc!{"$pull": {"devices": &device}};
     users_coll.update_one(filter, update, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     Ok("")
 }
@@ -537,7 +537,7 @@ pub async fn test_devices_handler(
 
     let filter = doc!{"_id": user._id};
     let remaining_devices = users_coll.find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorInternalServerError(""))?
         .devices;
 
@@ -556,7 +556,7 @@ pub async fn ping_handler(
 
     let filter = doc!{"_id": ping.id};
     let friend_devices = users_coll.find_one(filter, None).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorInternalServerError(""))?
         .devices;
 
@@ -629,7 +629,7 @@ pub async fn feedback_handler(
     _user: User,
 ) -> Result<impl Responder, Error> {
     db.collection::<Feedback>("feedbacks").insert_one(&*feedback, None).await
-        .map_err(|_| ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     if !cfg!(debug_assertions) {
         tokio::spawn(async move {
@@ -650,7 +650,7 @@ pub async fn log_handler(
     }
 
     let onlines = ws_addr.send(ConnectedIds).await
-        .map_err(|_| ErrorInternalServerError(""))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorInternalServerError(""))?;
 
     let onlines: Vec<String> = onlines.iter().map(|id| id.to_hex()).collect();
@@ -670,7 +670,7 @@ pub async fn files_handler(
     let path = PathBuf::from(format!("{}/files/{}", curr_dir.path, file));
 
     let res = NamedFile::open(path)
-        .map_err(|_| ErrorNotFound(file))?;
+        .log_and_map(ErrorNotFound(file))?;
 
     Ok(res)
 }
