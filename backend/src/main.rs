@@ -10,8 +10,6 @@ use actix_identity::IdentityMiddleware;
 use actix_session::{storage::RedisActorSessionStore, SessionMiddleware, config::PersistentSession};
 use std::{env, fs};
 
-use crate::utils::MapAndLog;
-
 mod schemas;
 mod routes;
 mod utils;
@@ -48,9 +46,8 @@ async fn main() -> std::io::Result<()> {
         println!("[Info] No '.env' file can be found in the current working directory, or it is formatted badly.\nYou can find information about the file in the documentation: https://github.com/horvbalint/speer#backendenv");
     }
 
-    Err::<(), &str>("wef").log_and_map("test").ok();
-
     env_logger::init();
+
     let env_vars = envy::prefixed("SPEER_").from_env::<EnvVars>().unwrap();
     let server_address = env_vars.server_address.clone();
 

@@ -98,7 +98,7 @@ pub async fn login_handler(
         .ok_or_else(|| ErrorBadRequest("Incorrect credentials"))?;
 
     let verified = verify(&credentials.password, user.password.as_str())
-        .log_and_map(ErrorUnauthorized("Password does not match"))?;
+        .log_and_map(ErrorInternalServerError(""))?;
 
     if !verified { return Err(ErrorUnauthorized("Password does not match")) }
     if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }
@@ -184,12 +184,12 @@ pub async fn resend_confirmation_handler(
     };
 
     let user = users_coll.find_one(filter, None).await
-        .log_and_map(ErrorBadRequest("Invalid email"))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorBadRequest("Invalid email"))?;
 
     let filter = doc!{"user": user._id};
     let confirm = confirms_coll.find_one(filter, None).await
-        .log_and_map(ErrorBadRequest("Failed to resend email"))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorBadRequest("Failed to resend email"))?;
 
     mail::send_confirmation(&user.username, &user.email, &confirm.token, &env_vars).await
@@ -278,7 +278,7 @@ pub async fn online_handler(
     user: User,
 ) -> Result<impl Responder, Error> {
     let id = ObjectId::parse_str(params.into_inner())
-        .log_and_map(ErrorBadRequest("Not an id"))?;
+        .map_err(|_| ErrorBadRequest("Not an id"))?;
 
     if !user.friends.contains(&id) {
         return Err(ErrorForbidden("Not a friend"));
@@ -343,7 +343,7 @@ pub async fn request_id_handler(
 ) -> Result<impl Responder, Error> {
     let id = params.into_inner();
     let id = ObjectId::from_str(&id)
-        .log_and_map(ErrorBadRequest("Not an id"))?;
+        .map_err(|_| ErrorBadRequest("Not an id"))?;
 
     if user._id == id {
         return Err(ErrorBadRequest("Make peace with yourself"))
@@ -417,7 +417,7 @@ pub async fn accept_id_handler(
 ) -> Result<impl Responder, Error> {
     let id = params.into_inner();
     let id = ObjectId::from_str(&id)
-        .log_and_map(ErrorBadRequest("Not an id"))?;
+        .map_err(|_| ErrorBadRequest("Not an id"))?;
 
     if !user.requests.iter().any(|r| r == &id) {
         return Err(ErrorBadRequest("Not in requests"));
@@ -469,7 +469,7 @@ pub async fn decline_id_handler(
 ) -> Result<impl Responder, Error> {
     let id = params.into_inner();
     let id = ObjectId::from_str(&id)
-        .log_and_map(ErrorBadRequest("Not an id"))?;
+        .map_err(|_| ErrorBadRequest("Not an id"))?;
 
     if !user.requests.iter().any(|r| r == &id) {
         return Err(ErrorBadRequest("Not in requests"));

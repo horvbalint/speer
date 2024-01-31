@@ -1,4 +1,5 @@
 use futures::future;
+use log::error;
 use mongodb::{
     bson::{doc, oid::ObjectId},
     Collection,
@@ -7,7 +8,6 @@ use rand::{distributions::Alphanumeric, Rng};
 use serde_json::json;
 use std::fs::File;
 use web_push::*;
-use log::error;
 
 use crate::schemas::{Device, User};
 
@@ -68,7 +68,8 @@ async fn send_push_notification(
     title: String,
     body: String,
 ) -> Result<(), WebPushError> {
-    let file = File::open("vapid.pem").log_and_map(WebPushError::Unspecified)?;
+    let file = File::open("vapid.pem")
+        .log_and_map(WebPushError::Unspecified)?;
 
     let subscription_info = SubscriptionInfo::new(
         &device.subscription.endpoint,
@@ -92,15 +93,16 @@ async fn send_push_notification(
 }
 
 pub trait MapAndLog<T> {
-    fn log_and_map<NewError>(self, error: NewError) -> Result<T, NewError>;
+    fn log_and_map<NewError: std::fmt::Debug>(self, error: NewError) -> Result<T, NewError>;
 }
 
 impl<T, OriginalError: Sized + std::fmt::Debug> MapAndLog<T> for Result<T, OriginalError> {
-    fn log_and_map<NewError>(self, error: NewError) -> Result<T, NewError> {
+    fn log_and_map<NewError: std::fmt::Debug>(self, error: NewError) -> Result<T, NewError> {
         match self {
             Ok(res) => Ok(res),
             Err(err) => {
-                error!("{err:#?}");
+                error!("{error:#?}\n{err:#?}");
+
                 Err(error)
             }
         }

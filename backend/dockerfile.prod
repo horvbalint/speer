@@ -17,7 +17,8 @@ RUN cargo build --release
 
 FROM debian:bookworm-slim
 WORKDIR /speer
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+
+RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /speer/target/release/speer /speer/speer
 COPY --from=builder /speer/changelog.json /speer/changelog.json
 COPY --from=builder /speer/emails /speer/emails
