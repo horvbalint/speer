@@ -32,8 +32,8 @@ pub struct EnvVars {
     noreply_email: String,
     #[serde(default = "default_server_address")]
     server_address: String,
-    #[serde(default = "default_redis_address")]
-    redis_address: String,
+    #[serde(default = "default_redis_url")]
+    redis_url: String,
     #[serde(default = "default_mongo_url")]
     mongo_url: String,
     #[serde(default = "default_frontend_url")]
@@ -70,7 +70,7 @@ async fn main() -> std::io::Result<()> {
         let changelog = serde_json::from_str::<Map<String, Value>>(&json_string).unwrap();
 
         let session_middleware = SessionMiddleware::builder(
-          RedisActorSessionStore::new(&env_vars.redis_address),
+          RedisActorSessionStore::new(&env_vars.redis_url),
           Key::from(env_vars.cookie_secret.as_ref())
         )
             .cookie_same_site(SameSite::Strict)
@@ -131,8 +131,8 @@ fn default_server_address() -> String {
     "localhost:9001".to_string()
 }
 
-fn default_redis_address() -> String {
-    "localhost:6379".to_string()
+fn default_redis_url() -> String {
+    "redis://localhost:6379".to_string()
 }
 
 fn default_mongo_url() -> String {

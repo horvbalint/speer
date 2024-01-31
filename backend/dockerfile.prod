@@ -15,6 +15,7 @@ RUN rm ./target/release/deps/speer*
 COPY . .
 RUN cargo build --release
 
+
 FROM debian:bookworm-slim
 WORKDIR /speer
 

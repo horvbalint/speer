@@ -1,5 +1,3 @@
-import NuxtConfig from '~/nuxt.config'
-import axios from 'axios'
 import streamSaver from 'streamsaver'
 import { WritableStream as ponyFillWritableStream } from "web-streams-polyfill/ponyfill"
 
@@ -399,16 +397,16 @@ export const actions = {
     pusher.subscribe( 'friend', async friend => {
       ctx.commit('addFriend', friend)
 
-      axios.get(`${NuxtConfig.axios.baseURL}/online/${friend._id}`, {withCredentials: true})
+      this.$axios.get(`/online/${friend._id}`, {withCredentials: true})
         .then( ({data: online}) => ctx.commit('setOnline', {remoteId: friend._id, online}) )
         .catch( err => console.error(err) )
     })
 
-    axios.get(`${NuxtConfig.axios.baseURL}/onlines`, {withCredentials: true})
+    this.$axios.get(`/onlines`, {withCredentials: true})
       .then( ({data: onlines}) => ctx.commit('setOnlines', onlines) )
       .catch( err => console.error(err) )
 
-    axios.get(`${NuxtConfig.axios.baseURL}/request`, {withCredentials: true})
+    this.$axios.get(`/request`, {withCredentials: true})
       .then( ({data: requests}) => ctx.commit('setRequests', requests) )
       .catch( err => console.error(err) )
   },
@@ -560,11 +558,11 @@ export const actions = {
   acceptRequest(ctx) {
     let request = ctx.state.requests[0]
 
-    axios.post(`${NuxtConfig.axios.baseURL}/accept/${request._id}`, null, {withCredentials: true})
+    this.$axios.post(`/accept/${request._id}`, null, {withCredentials: true})
       .then( () => {
         ctx.commit('addFriend', request)
         ctx.commit('removeRequest')
-        return axios.get(`${NuxtConfig.axios.baseURL}/online/${request._id}`, {withCredentials: true})
+        return this.$axios.get(`/online/${request._id}`, {withCredentials: true})
       })
       .then( ({data: online}) => ctx.commit('setOnline', {remoteId: request._id, online}) )
       .catch( err => {
@@ -573,7 +571,7 @@ export const actions = {
       })
   },
   declineRequest(ctx) {
-    axios.post(`${NuxtConfig.axios.baseURL}/decline/${ctx.state.requests[0]._id}`, {}, {withCredentials: true})
+    this.$axios.post(`/decline/${ctx.state.requests[0]._id}`, {}, {withCredentials: true})
     .then( () => ctx.commit('removeRequest') )
     .catch( err => {
       console.error(err)
@@ -692,7 +690,7 @@ export const actions = {
     ctx.commit('call/reset')
     ctx.commit('popUp/reset')
 
-    axios.post(`${NuxtConfig.axios.baseURL}/logout`, null, {withCredentials: true})
+    this.$axios.post(`/logout`, null, {withCredentials: true})
     this.$router.push('/login')
   },
   setBeforeInstallPrompt(ctx, event) {
