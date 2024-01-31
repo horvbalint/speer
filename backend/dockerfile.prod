@@ -1,4 +1,5 @@
-FROM rust:1.75 as builder
+# FROM rust:1.75 as builder
+FROM rust:1.75
 
 # 1. Create a new empty shell project
 RUN USER=root cargo new --bin speer
@@ -15,13 +16,15 @@ RUN rm ./target/release/deps/speer*
 COPY . .
 RUN cargo build --release
 
+CMD ["/speer/target/release/speer"]
 
-FROM debian:bookworm-slim
-WORKDIR /speer
 
-RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /speer/target/release/speer /speer/speer
-COPY --from=builder /speer/changelog.json /speer/changelog.json
-COPY --from=builder /speer/emails /speer/emails
-COPY --from=builder /speer/files /speer/files
-CMD ["/speer/speer"]
+# FROM debian:bookworm-slim
+# WORKDIR /speer
+
+# RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lists/*
+# COPY --from=builder /speer/target/release/speer /speer/speer
+# COPY --from=builder /speer/changelog.json /speer/changelog.json
+# COPY --from=builder /speer/emails /speer/emails
+# COPY --from=builder /speer/files /speer/files
+# CMD ["/speer/speer"]
