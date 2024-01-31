@@ -82,12 +82,12 @@ async fn send_push_notification(
     let content = json!({"title": title, "body": body}).to_string();
     let content = content.as_bytes();
 
-    let mut message_builder = WebPushMessageBuilder::new(&subscription_info)?;
+    let mut message_builder = WebPushMessageBuilder::new(&subscription_info);
     message_builder.set_payload(ContentEncoding::Aes128Gcm, content);
     message_builder.set_vapid_signature(sig_builder);
 
     let message = message_builder.build()?;
-    let client = WebPushClient::new()?;
+    let client = IsahcWebPushClient::new()?;
 
     client.send(message).await
 }

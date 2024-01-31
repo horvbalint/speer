@@ -29,9 +29,10 @@ impl FromRequest for User {
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
         let db = req.app_data::<Data<Database>>().unwrap();
         let collection = db.collection::<User>("users");
-        let identity = Identity::extract(req).into_inner();
-
+        
+        let req = req.clone();
         Box::pin(async move {
+          let identity = Identity::extract(&req).await;
           process_req_auth_data(collection, identity).await
         })
     }
@@ -57,15 +58,15 @@ impl Default for User {
 
 async fn process_req_auth_data(collection: Collection<User>, identity: Result<Identity, Error>) -> Result<User, Error> {
     let id = identity
-      .log_and_map(ErrorUnauthorized("You are not logged in"))?
+      .map_err(|_| ErrorUnauthorized("You are not logged in"))?
       .id()
-      .log_and_map(ErrorUnauthorized("You are not logged in"))?;
+      .log_and_map(ErrorInternalServerError(""))?;
 
     let id = ObjectId::parse_str(&id)
       .log_and_map(ErrorInternalServerError(""))?;
 
     let user = collection.find_one(doc! {"_id": id}, None).await
-        .log_and_map(ErrorUnauthorized("You are not logged in"))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorUnauthorized("You are not logged in"))?;
 
     if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }

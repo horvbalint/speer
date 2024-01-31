@@ -1,8 +1,8 @@
-use cookie::{Key, time::Duration, SameSite};
+use cookie::time::Duration;
 use dotenv::dotenv;
 use actix::Actor;
 use actix_cors::Cors;
-use actix_web::{web::{self, Data}, App, HttpServer, middleware::Logger};
+use actix_web::{cookie::{Key, SameSite}, middleware::Logger, web::{self, Data}, App, HttpServer};
 use mongodb::{Client, options::ClientOptions};
 use serde::Deserialize;
 use serde_json::{Map, Value};
