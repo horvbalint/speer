@@ -28,9 +28,8 @@ pub async fn send_confirmation(
     email: &str,
     token: &str,
     env_vars: &EnvVars,
-) -> Result<(), String> {
-    let mut html = fs::read_to_string("emails/emailConfirmation.html")
-        .map_err(|_| "Failed to open email template".to_string())?;
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut html = fs::read_to_string("emails/emailConfirmation.html")?;
 
     html = html.replace(
         "{{CONFIRM_URL}}",
@@ -65,9 +64,8 @@ pub async fn send_confirmation(
 pub async fn send_feedback_notification(
     feedback: &Feedback,
     env_vars: &EnvVars,
-) -> Result<(), String> {
-    let mut html = fs::read_to_string("emails/feedbackNotification.html")
-        .map_err(|_| "Failed to open email template".to_string())?;
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut html = fs::read_to_string("emails/feedbackNotification.html")?;
 
     html = html.replace("{{TYPE}}", &html_escape::encode_safe(&feedback.r#type));
     html = html.replace(
@@ -100,7 +98,7 @@ pub async fn send_feedback_notification(
     send_email(content, env_vars).await
 }
 
-async fn send_email(content: Value, env_vars: &EnvVars) -> Result<(), String> {
+async fn send_email(content: Value, env_vars: &EnvVars) -> Result<(), Box<dyn std::error::Error>> {
     let client = reqwest::Client::new();
     let response = client
         .post("https://api.mailjet.com/v3.1/send")
@@ -110,15 +108,11 @@ async fn send_email(content: Value, env_vars: &EnvVars) -> Result<(), String> {
         )
         .json(&content)
         .send()
-        .await
-        .or_else(|err| {
-            eprintln!("{:#?}", err);
-            Err("Failed to send email".to_string())
-        })?;
+        .await?;
 
     if !response.status().is_success() {
         eprintln!("{:#?}", response.status());
-        return Err(format!("Mailjet API error: {}", response.status()));
+        return Err(format!("Mailjet API error: {}", response.status()).into());
     }
 
     Ok(())

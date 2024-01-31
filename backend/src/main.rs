@@ -47,6 +47,7 @@ async fn main() -> std::io::Result<()> {
     }
 
     env_logger::init();
+
     let env_vars = envy::prefixed("SPEER_").from_env::<EnvVars>().unwrap();
     let server_address = env_vars.server_address.clone();
 

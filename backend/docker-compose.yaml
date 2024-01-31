@@ -8,14 +8,14 @@ services:
       - ./:/speer/
       - /speer/target
     ports:
-      - "9001:9001"
+      - 9001:9001
     depends_on:
       - mongo
       - redis
     environment:
-      SPEER_SERVER_ADDRESS: "0.0.0.0:9001"
-      SPEER_REDIS_ADDRESS: "redis:6379"
-      SPEER_MONGO_URL: "mongodb://mongo:27017"
+      SPEER_SERVER_ADDRESS: 0.0.0.0:9001
+      SPEER_REDIS_ADDRESS: redis:6379
+      SPEER_MONGO_URL: mongodb://mongo:27017
 
   mongo:
     image: mongo
