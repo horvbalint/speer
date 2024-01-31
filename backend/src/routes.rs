@@ -98,14 +98,14 @@ pub async fn login_handler(
         .ok_or_else(|| ErrorBadRequest("Incorrect credentials"))?;
 
     let verified = verify(&credentials.password, user.password.as_str())
-        .log_and_map(ErrorInternalServerError(""))?;
+        .log_and_map(ErrorInternalServerError("verification failed"))?;
 
     if !verified { return Err(ErrorUnauthorized("Password does not match")) }
     if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }
     if !user.confirmed { return Err(ErrorUnauthorized("Email not confirmed")) }
 
     Identity::login(&request.extensions(), user._id.to_hex())
-      .log_and_map(ErrorInternalServerError(""))?;
+      .log_and_map(ErrorInternalServerError("identity failed"))?;
 
     Ok("")
 }
