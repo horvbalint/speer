@@ -7,7 +7,7 @@ use mongodb::{Client, options::ClientOptions};
 use serde::Deserialize;
 use serde_json::{Map, Value};
 use actix_identity::IdentityMiddleware;
-use actix_session::{storage::RedisActorSessionStore, SessionMiddleware, config::PersistentSession};
+use actix_session::{storage::RedisSessionStore, SessionMiddleware, config::PersistentSession};
 use std::{env, fs};
 
 mod schemas;
@@ -56,6 +56,8 @@ async fn main() -> std::io::Result<()> {
     let db = client.database("speer");
     let ws_server = ws::Server::new(db.collection::<schemas::User>("users")).start();
 
+    let redis_store = RedisSessionStore::new(&env_vars.redis_url).await.unwrap();
+
     let server = HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin(&env_vars.frontend_url)
@@ -70,7 +72,7 @@ async fn main() -> std::io::Result<()> {
         let changelog = serde_json::from_str::<Map<String, Value>>(&json_string).unwrap();
 
         let session_middleware = SessionMiddleware::builder(
-          RedisActorSessionStore::new(&env_vars.redis_url),
+          redis_store.clone(),
           Key::from(env_vars.cookie_secret.as_ref())
         )
             .cookie_same_site(SameSite::Strict)
