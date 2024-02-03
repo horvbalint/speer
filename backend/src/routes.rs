@@ -667,7 +667,19 @@ pub async fn files_handler(
     _user: User,
 ) -> Result<impl Responder, Error> {
     let file = params.into_inner();
-    let path = PathBuf::from(format!("{}/files/{}", curr_dir.path, file));
+
+    let path = if file == "avatar.jpg" {
+        format!("{}/avatar.jpg", curr_dir.path).parse()?
+    } else {
+        let files_path: PathBuf = format!("{}/files/", curr_dir.path).parse()?;
+        let requested_path = fs::canonicalize(files_path.join(&file))?;
+
+        if !requested_path.starts_with(files_path) {
+            return Err(ErrorBadRequest(""))
+        }
+
+        requested_path
+    };
 
     let res = NamedFile::open(path)
         .log_and_map(ErrorNotFound(file))?;

@@ -14,7 +14,7 @@ services:
       - redis
     environment:
       SPEER_SERVER_ADDRESS: 0.0.0.0:9001
-      SPEER_REDIS_URL: redis:6379
+      SPEER_REDIS_URL: redis://redis:6379
       SPEER_MONGO_URL: mongodb://mongo:27017
 
   mongo:

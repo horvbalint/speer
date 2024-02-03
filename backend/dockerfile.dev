@@ -11,6 +11,7 @@ WORKDIR /speer
 # 2. Copy our manifests
 COPY ./Cargo.lock ./Cargo.lock
 COPY ./Cargo.toml ./Cargo.toml
+COPY ./.gitignore ./.gitignore
 
 # 3. Build only the dependencies to cache them
 RUN mold --run cargo build && rm ./src/*.rs && rm ./target/debug/deps/speer*

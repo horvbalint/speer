@@ -1,5 +1,4 @@
 files/*
-!files/avatar.jpg
 target
 config.json
 .env
