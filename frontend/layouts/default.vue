@@ -54,7 +54,7 @@ import FilesToConfirmPopUp from '~/components/popUp/filesToConfirm'
 import ChangelogPopUp from '~/components/popUp/changelog'
 import FeedbackPopUp from '~/components/popUp/feedback'
 import BreakingChangePopUp from '~/components/popUp/breakingChange'
-import PackageJSON from '~/../package.json'
+import PackageJSON from '~/package.json'
 
 export default {
   middleware: ['auth'],
@@ -141,7 +141,7 @@ export default {
       for(let partner in this.$store.state.partners) {
         if(!this.$store.state.partners[partner].file || !this.$store.state.partners[partner].file.connection)
           continue
-        
+
         if(this.$store.state.partners[partner].file.connection.isSending)
           return 'You are sending a filel! Do you really want to close Speer?'
 

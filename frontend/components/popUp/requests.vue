@@ -6,7 +6,7 @@
     :closeWithSwipe="false"
     :closeWithTopper="false"
   >
-    <div class="img" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.requests[0].avatar}')`}"/>
+    <div class="img" :style="{'background-image': `url('${$config.backendUrl}/static/${$store.state.requests[0].avatar}')`}"/>
 
     <div class="contact">
       <p>Username: <span>{{$store.state.requests[0].username}}</span></p>

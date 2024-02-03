@@ -1,5 +1,3 @@
-import NuxtConfig from '~/../nuxt.config'
-import axios from 'axios'
 import streamSaver from 'streamsaver'
 import { WritableStream as ponyFillWritableStream } from "web-streams-polyfill/ponyfill"
 
@@ -21,16 +19,12 @@ export const state = () => ({
   requests: [], // friend requests
 
   filesToConfirm: [], // files waiting to be sent after using the Web Share Target API
-  
+
   sideBarDrag: null,  // Drag instance (plugins/drag.js)
   popUpDrag: null, // Drag instance (plugins/drag.js)
   screenWidth: 1000, // width of the screen
   beforeInstallPrompt: null, // deffered PWA install event
   pageVisible: true, // is the page visible
-  backendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001',
-  frontendURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun',
-  // backendURL: 'http://localhost:9001',
-  // frontendURL: 'http://localhost:9000',
   sounds: {
     message: null, // sound to play when a message is received
     call: null, // sound to play when a call is received
@@ -106,14 +100,14 @@ export const mutations = {
         hasRemoteAudio: false,
         hasRemoteVideo: false,
         constraints: {
-          video: { 
+          video: {
             input: {
               height: { max: 1080 },
               frameRate: { max: 25 },
             },
             output: {}
           },
-          audio: { 
+          audio: {
             input: {
               echoCancellation: true,
               noiseSuppression: true,
@@ -125,7 +119,7 @@ export const mutations = {
       }
     })
   },
-  addConnection(state, {remoteId, type, connection}) {   
+  addConnection(state, {remoteId, type, connection}) {
     state.partners[remoteId][type].connection = connection
   },
   closeConnection(state, {type, remoteId}) {
@@ -141,7 +135,7 @@ export const mutations = {
       console.log("GOTCHA!")
       console.trace()
     }
-    
+
     let message = {
       sender: senderId,
       timeStamp: Date.now(),
@@ -188,10 +182,6 @@ export const mutations = {
     state.beforeInstallPrompt = null
     state.pageVisible = true
     state.filesToConfirm = []
-    state.backendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001'
-    state.frontendURL = process.env.NODE_ENV == 'development' ? 'http://localhost:9000' : 'https://speer.fun'
-    // state.backendURL = 'http://localhost:9001'
-    // state.frontendURL = 'http://localhost:9000'
     state.sounds = {
       message: null,
       call: null,
@@ -296,14 +286,14 @@ export const mutations = {
     state.partners[remoteId].call.hasRemoteAudio = false
     state.partners[remoteId].call.hasRemoteVideo = false
     state.partners[remoteId].call.constraints = {
-      video: { 
+      video: {
         input: {
           height: { max: 1080 },
           frameRate: { max: 25 },
         },
         output: {}
       },
-      audio: { 
+      audio: {
         input: {
           echoCancellation: true,
           noiseSuppression: true,
@@ -312,7 +302,7 @@ export const mutations = {
       }
     }
     state.partners[remoteId].call.startTime = null
-    
+
     if(full)
       state.partners[remoteId].call.connection = null
   },
@@ -372,14 +362,14 @@ export const actions = {
 
     peerClient.onConnection = ({remoteId, connection}) => {
       setTextConnectionListeners(ctx, remoteId, connection)
-      
+
       ctx.commit('checkPartnerState', remoteId)
       ctx.commit('addConnection', {remoteId, type: 'text', connection})
     }
 
     peerClient.onFileConnection = ({remoteId, connection}) => {
       setFileConnectionListeners(ctx, remoteId, connection)
-      
+
       ctx.commit('checkPartnerState', remoteId)
       ctx.commit('addConnection', {remoteId, type: 'file', connection})
     }
@@ -392,7 +382,7 @@ export const actions = {
   },
   setPusher(ctx, pusher) {
     ctx.commit('setPusher', pusher)
-    
+
     pusher.subscribe( 'request', request => ctx.commit('addRequest', request) )
     pusher.subscribe( 'login', remoteId => ctx.commit('setOnline', {remoteId, online: true}) )
     pusher.subscribe( 'logout', remoteId => {
@@ -401,22 +391,22 @@ export const actions = {
 
       if(ctx.state.popUp.call && ctx.state.popUp.call.caller._id == remoteId)
         ctx.dispatch('popUp/set', {popUp: 'call', value: null})
-        
+
       ctx.commit('setOnline', {remoteId, online: false})
     })
     pusher.subscribe( 'friend', async friend => {
       ctx.commit('addFriend', friend)
-  
-      axios.get(`${NuxtConfig.axios.baseURL}/online/${friend._id}`, {withCredentials: true})
+
+      this.$axios.get(`/online/${friend._id}`, {withCredentials: true})
         .then( ({data: online}) => ctx.commit('setOnline', {remoteId: friend._id, online}) )
         .catch( err => console.error(err) )
     })
-  
-    axios.get(`${NuxtConfig.axios.baseURL}/onlines`, {withCredentials: true})
+
+    this.$axios.get(`/onlines`, {withCredentials: true})
       .then( ({data: onlines}) => ctx.commit('setOnlines', onlines) )
       .catch( err => console.error(err) )
 
-    axios.get(`${NuxtConfig.axios.baseURL}/request`, {withCredentials: true})
+    this.$axios.get(`/request`, {withCredentials: true})
       .then( ({data: requests}) => ctx.commit('setRequests', requests) )
       .catch( err => console.error(err) )
   },
@@ -453,7 +443,7 @@ export const actions = {
           text: 'Reload',
           action: () => location.reload()
         })
-        
+
         return reject()
       }
 
@@ -521,7 +511,7 @@ export const actions = {
         for(let file of files) {
           let messageIndex = ctx.state.partners[remoteId].text.messages.length
           let percentCallback = percent => ctx.commit('setPercent', {remoteId, percent, index: messageIndex})
-          
+
           ctx.commit('addMessage', {
             remoteId,
             senderId: ctx.state.user._id,
@@ -529,7 +519,7 @@ export const actions = {
             file: true,
             percent: 0,
           })
-    
+
           await ctx.state.partners[remoteId].file.connection.send(file, percentCallback)
             .catch( err => {
               console.error(err)
@@ -568,11 +558,11 @@ export const actions = {
   acceptRequest(ctx) {
     let request = ctx.state.requests[0]
 
-    axios.post(`${NuxtConfig.axios.baseURL}/accept/${request._id}`, null, {withCredentials: true})
+    this.$axios.post(`/accept/${request._id}`, null, {withCredentials: true})
       .then( () => {
         ctx.commit('addFriend', request)
         ctx.commit('removeRequest')
-        return axios.get(`${NuxtConfig.axios.baseURL}/online/${request._id}`, {withCredentials: true})
+        return this.$axios.get(`/online/${request._id}`, {withCredentials: true})
       })
       .then( ({data: online}) => ctx.commit('setOnline', {remoteId: request._id, online}) )
       .catch( err => {
@@ -581,7 +571,7 @@ export const actions = {
       })
   },
   declineRequest(ctx) {
-    axios.post(`${NuxtConfig.axios.baseURL}/decline/${ctx.state.requests[0]._id}`, {}, {withCredentials: true})
+    this.$axios.post(`/decline/${ctx.state.requests[0]._id}`, {}, {withCredentials: true})
     .then( () => ctx.commit('removeRequest') )
     .catch( err => {
       console.error(err)
@@ -653,9 +643,9 @@ export const actions = {
     ctx.dispatch('popUp/close', 'file')
   },
   loadSounds(ctx) {
-    let message = new Audio(`${ctx.state.frontendURL}/message.mp3`)
-    let call = new Audio(`${ctx.state.frontendURL}/call.mp3`)
-    let callWaiting = new Audio(`${ctx.state.frontendURL}/callWaiting.mp3`)
+    let message = new Audio('/message.mp3')
+    let call = new Audio('/call.mp3')
+    let callWaiting = new Audio('/callWaiting.mp3')
 
     call.loop = true
     callWaiting.loop = true
@@ -676,7 +666,7 @@ export const actions = {
   },
   stopSound(ctx, name) {
     ctx.state.sounds[name].pause()
-    let sound = new Audio(`${ctx.state.frontendURL}/${name}.mp3`)
+    let sound = new Audio(`/${name}.mp3`)
 
     if(name.startsWith('call'))
       sound.loop = true
@@ -700,7 +690,7 @@ export const actions = {
     ctx.commit('call/reset')
     ctx.commit('popUp/reset')
 
-    axios.post(`${NuxtConfig.axios.baseURL}/logout`, null, {withCredentials: true})
+    this.$axios.post(`/logout`, null, {withCredentials: true})
     this.$router.push('/login')
   },
   setBeforeInstallPrompt(ctx, event) {

@@ -1,11 +1,11 @@
 use std::pin::Pin;
 use actix_web::{Error, FromRequest, HttpRequest, dev, error::{ErrorUnauthorized, ErrorInternalServerError}, web::Data};
-use futures::{Future};
+use futures::Future;
 use mongodb::{Collection, Database, bson::{doc, oid::ObjectId, serde_helpers::serialize_object_id_as_hex_string}};
 use actix_identity::Identity;
 use serde::{Serialize, Deserialize};
 
-use crate::schemas::{Device, MinimalDevice};
+use crate::{schemas::{Device, MinimalDevice}, utils::MapAndLog};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
@@ -29,9 +29,10 @@ impl FromRequest for User {
     fn from_request(req: &HttpRequest, _: &mut dev::Payload) -> Self::Future {
         let db = req.app_data::<Data<Database>>().unwrap();
         let collection = db.collection::<User>("users");
-        let identity = Identity::extract(req).into_inner();
-
+        
+        let req = req.clone();
         Box::pin(async move {
+          let identity = Identity::extract(&req).await;
           process_req_auth_data(collection, identity).await
         })
     }
@@ -59,13 +60,13 @@ async fn process_req_auth_data(collection: Collection<User>, identity: Result<Id
     let id = identity
       .map_err(|_| ErrorUnauthorized("You are not logged in"))?
       .id()
-      .map_err(|_| ErrorUnauthorized("You are not logged in"))?;
+      .log_and_map(ErrorInternalServerError(""))?;
 
     let id = ObjectId::parse_str(&id)
-      .map_err(|_| ErrorInternalServerError(""))?;
+      .log_and_map(ErrorInternalServerError(""))?;
 
     let user = collection.find_one(doc! {"_id": id}, None).await
-        .map_err(|_| ErrorUnauthorized("You are not logged in"))?
+        .log_and_map(ErrorInternalServerError(""))?
         .ok_or_else(|| ErrorUnauthorized("You are not logged in"))?;
 
     if user.deleted { return Err(ErrorUnauthorized("User deactivated")) }

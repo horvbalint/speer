@@ -6,7 +6,7 @@
     :closeWithTopper="false"
     @close="$store.dispatch('call/decline')"
   >
-    <div class="img" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.state.popUp.call.caller.avatar}')`}"/>
+    <div class="img" :style="{'background-image': `url('${$config.backendUrl}/static/${$store.state.popUp.call.caller.avatar}')`}"/>
     <p>{{$store.state.popUp.call.caller.username}} is calling you.</p>
   </PopUp>
 </template>

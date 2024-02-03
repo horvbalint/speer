@@ -1,0 +1,5 @@
+files/*
+target
+config.json
+.env
+vapid.pem

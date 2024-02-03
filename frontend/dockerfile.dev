@@ -1,0 +1,11 @@
+# ENV NODE_VERSION 18.19.0
+FROM node:18
+
+WORKDIR /speer
+COPY package.json ./
+
+#enable pnpm
+RUN corepack enable
+RUN pnpm i
+
+CMD [ "pnpm", "run", "dev" ]

@@ -1,5 +1,6 @@
+const backendUrl = process.env.SPEER_BACKEND_URL || 'http://localhost:9001'
+
 export default {
-  rootDir: 'frontend/',
   /*
   ** Nuxt rendering mode
   ** See https://nuxtjs.org/api/configuration-mode
@@ -15,7 +16,11 @@ export default {
   ** See https://nuxtjs.org/api/configuration-head
   */
   server: {
-    port: 9000,
+    host: process.env.HOST || 'localhost',
+    port: process.env.PORT || 9000,
+  },
+  publicRuntimeConfig: {
+    backendUrl
   },
   head: {
     title: 'Speer',
@@ -25,7 +30,7 @@ export default {
       { hid: 'description', name: 'description', content: 'Speer is a fast, privacy focused and open source communication app for various use cases.' },
       { property: 'og:title', content: 'Speer' },
       { property: 'og:description', content: 'Speer is a fast, privacy focused and open source communication app for various use cases.' },
-      { property: 'og:image', content: 'https://speer.fun/icon.png' },
+      { property: 'og:image', content: '/icon.png' },
     ],
     link: [
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
@@ -106,8 +111,7 @@ export default {
   ** See https://axios.nuxtjs.org/options
   */
   axios: {
-    baseURL: process.env.NODE_ENV == 'development' ? 'http://localhost:9001' : 'https://speer.fun:9001',
-    // baseURL: 'http://localhost:9001',
+    baseURL: backendUrl,
   },
   /*
   ** Build configuration

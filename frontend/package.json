@@ -1,0 +1,22 @@
+{
+  "name": "speer",
+  "version": "3.10.16",
+  "license": "GPL-3.0-or-later",
+  "author": "horvbalint",
+  "scripts": {
+    "dev": "nuxt",
+    "build": "nuxt build",
+    "start": "nuxt start",
+    "generate": "nuxt generate"
+  },
+  "dependencies": {
+    "simple-peer": "^9.11.1",
+    "streamsaver": "^2.0.6",
+    "web-streams-polyfill": "^3.2.1"
+  },
+  "devDependencies": {
+    "@nuxtjs/axios": "^5.13.6",
+    "@nuxtjs/pwa": "^3.3.5",
+    "nuxt": "^2.17.3"
+  }
+}

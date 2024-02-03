@@ -4,7 +4,7 @@
     icon="fas fa-file"
     :buttons="buttons"
   >
-    <div class="img" :style="{'background-image': `url('${$store.state.backendURL}/static/${$store.getters.partnerFriend.avatar}')`}"/>
+    <div class="img" :style="{'background-image': `url('${$config.backendUrl}/static/${$store.getters.partnerFriend.avatar}')`}"/>
     <p class="description">Do you want to send these files to '{{$store.getters.partnerFriend.username}}'?</p>
 
     <div class="file" v-for="(file, index) in $store.state.filesToConfirm" :key="`${file}-${index}`">

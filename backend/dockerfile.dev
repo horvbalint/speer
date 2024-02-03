@@ -1,0 +1,19 @@
+FROM rust:1.75
+
+# 0. Install dependencies
+RUN apt update && apt -y install mold
+RUN mold --run cargo install cargo-watch
+
+# 1. Create a new empty shell project
+RUN USER=root cargo new --bin speer
+WORKDIR /speer
+
+# 2. Copy our manifests
+COPY ./Cargo.lock ./Cargo.lock
+COPY ./Cargo.toml ./Cargo.toml
+COPY ./.gitignore ./.gitignore
+
+# 3. Build only the dependencies to cache them
+RUN mold --run cargo build && rm ./src/*.rs && rm ./target/debug/deps/speer*
+
+CMD ["mold", "--run", "cargo", "watch", "-c", "-q", "-x", "run dev"]
