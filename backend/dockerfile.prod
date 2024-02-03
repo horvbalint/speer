@@ -24,6 +24,5 @@ RUN apt-get update && apt-get install -y openssl wget && rm -rf /var/lib/apt/lis
 COPY --from=builder /speer/target/release/speer /speer/speer
 COPY --from=builder /speer/changelog.json /speer/changelog.json
 COPY --from=builder /speer/emails /speer/emails
-COPY --from=builder /speer/files /speer/files
 COPY --from=builder /speer/avatar.jpg /speer/avatar.jpg
 CMD ["/speer/speer"]
