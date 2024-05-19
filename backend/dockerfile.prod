@@ -3,7 +3,10 @@ FROM rust:1.75 as builder
 ARG CARGO_BUILD_TARGET
 ENV CARGO_BUILD_TARGET ${CARGO_BUILD_TARGET}
 
-# 0. Install the required compilation target
+# 0. Install the required compilation target and dependecies
+RUN dpkg --add-architecture arm64
+RUN apt-get update && apt-get install --assume-yes libssl-dev:arm64
+
 RUN rustup target add ${CARGO_BUILD_TARGET}
 
 # 1. Create a new empty shell project
