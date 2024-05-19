@@ -1,4 +1,3 @@
-#
 name: Create and publish a Docker image
 
 # Configures this workflow to run every time a tag is created.
@@ -15,12 +14,26 @@ env:
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   build-and-push-image:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        architecture:
+          - {
+              name: linux-x64,
+              os: ubuntu-20.04,
+              target: x86_64-unknown-linux-gnu,
+            }
+          - {
+              name: linux-arm64,
+              os: ubuntu-20.04,
+              target: aarch64-unknown-linux-gnu,
+            }
+
+    runs-on: ${{ matrix.architecture.os }}
     # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
     permissions:
       contents: read
       packages: write
-      #
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,7 +51,7 @@ jobs:
         id: meta_backend
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend-${{ matrix.architecture.name }}
       # Building and pushing the backend image
       - name: Build and push backend Docker image
         uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
@@ -48,6 +61,8 @@ jobs:
           push: true
           tags: ${{ steps.meta_backend.outputs.tags }}
           labels: ${{ steps.meta_backend.outputs.labels }}
+          build-args: |
+            "CARGO_BUILD_TARGET=${{ matrix.architecture.target }}"
       # - name: Deploy to Coolify
       #   run: |
       #    curl --request GET '${{ secrets.COOLIFY_WEBHOOK }}' --header 'Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}'

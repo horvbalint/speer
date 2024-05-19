@@ -1,5 +1,8 @@
 FROM rust:1.75 as builder
 
+ARG CARGO_BUILD_TARGET
+ENV CARGO_BUILD_TARGET ${CARGO_BUILD_TARGET}
+
 # 1. Create a new empty shell project
 RUN USER=root cargo new --bin speer
 WORKDIR /speer
